@@ -1,0 +1,32 @@
+{
+  "cli": {
+    "version": ">= 18.7.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "autoIncrement": true,
+      "environment": "development"
+    },
+    "preview": {
+      "distribution": "internal",
+      "autoIncrement": true,
+      "environment": "preview"
+    },
+    "production": {
+      "autoIncrement": true,
+      "environment": "production"
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "lnpj2003@gmail.com",
+        "ascAppId": "6762957272",
+        "appleTeamId": "3KH298ZP59"
+      }
+    }
+  }
+}
