@@ -159,6 +159,12 @@ describe('ManageVenuesScreen', () => {
   const alertSpy = jest.spyOn(Alert, 'alert');
   const navigation = { goBack: jest.fn() };
 
+  function confirmRemoveAlert() {
+    alertSpy.mockImplementation((title, message, buttons) => {
+      buttons?.find((button) => button.text === 'Remove')?.onPress?.();
+    });
+  }
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockIsVenueOptionInUse.mockReturnValue(false);
@@ -177,6 +183,8 @@ describe('ManageVenuesScreen', () => {
   });
 
   it('deletes an unused venue', async () => {
+    confirmRemoveAlert();
+
     const screen = render(
       <ManageVenuesScreen
         route={{ key: '1', name: 'ManageVenues' } as any}
@@ -205,8 +213,8 @@ describe('ManageVenuesScreen', () => {
 
     expect(mockDeleteVenueOption).not.toHaveBeenCalled();
     expect(alertSpy).toHaveBeenCalledWith(
-      'Cannot remove venue',
-      'This venue is used by existing performances.'
+      'Venue is in use',
+      'Open the usage list to replace or remove this venue from performances first.'
     );
   });
 

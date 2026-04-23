@@ -1,6 +1,6 @@
 {
   "name": "stagepassport",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
@@ -21,14 +21,15 @@
     "@react-navigation/bottom-tabs": "^7.15.5",
     "@react-navigation/native": "^7.1.33",
     "@react-navigation/native-stack": "^7.14.4",
-    "expo": "~54.0.0",
+    "expo": "~54.0.34",
     "expo-apple-authentication": "~8.0.8",
     "expo-build-properties": "~1.0.10",
     "expo-constants": "~18.0.13",
-    "expo-dev-client": "~6.0.20",
+    "expo-dev-client": "~6.0.21",
     "expo-secure-store": "~15.0.8",
     "expo-status-bar": "~3.0.9",
     "firebase": "^12.10.0",
+    "firebase-admin": "^13.8.0",
     "react": "19.1.0",
     "react-native": "0.81.5",
     "react-native-safe-area-context": "~5.6.0",
@@ -41,7 +42,9 @@
     "@types/react": "~19.1.10",
     "jest": "~29.7.0",
     "jest-expo": "~54.0.17",
+    "metro-config": "^0.83.3",
     "react-test-renderer": "19.1.0",
+    "tsx": "^4.21.0",
     "typescript": "~5.9.2"
   },
   "private": true

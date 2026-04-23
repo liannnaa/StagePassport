@@ -133,6 +133,12 @@ describe('ManageGenresScreen', () => {
     navigate: jest.fn(),
   };
 
+  function confirmRemoveAlert() {
+    alertSpy.mockImplementation((title, message, buttons) => {
+      buttons?.find((button) => button.text === 'Remove')?.onPress?.();
+    });
+  }
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockIsGenreOptionInUse.mockReturnValue(false);
@@ -154,7 +160,7 @@ describe('ManageGenresScreen', () => {
     );
 
     expect(screen.getByText('Indie')).toBeTruthy();
-    expect(screen.getByText('Tap to manage sub-genres')).toBeTruthy();
+    expect(screen.getByText('Manage genre usage and sub-genres')).toBeTruthy();
   });
 
   it('navigates to the sub-genres screen when a genre is pressed', () => {
@@ -165,7 +171,7 @@ describe('ManageGenresScreen', () => {
       />
     );
 
-    fireEvent.press(screen.getByText('Indie'));
+    fireEvent.press(screen.getByText('Sub-genres'));
 
     expect(navigation.navigate).toHaveBeenCalledWith('ManageSubGenres', {
       genreId: 'indie',
@@ -174,6 +180,8 @@ describe('ManageGenresScreen', () => {
   });
 
   it('deletes an unused genre', async () => {
+    confirmRemoveAlert();
+
     const screen = render(
       <ManageGenresScreen
         route={{ key: '1', name: 'ManageGenres' } as any}
@@ -203,7 +211,10 @@ describe('ManageGenresScreen', () => {
     fireEvent.press(screen.getByText('Remove'));
 
     expect(mockDeleteGenreOption).not.toHaveBeenCalled();
-    expect(alertSpy).not.toHaveBeenCalled();
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Genre is in use',
+      'Open the usage list to replace or remove this genre from performances first.'
+    );
     });
 
   it('adds a new genre', async () => {

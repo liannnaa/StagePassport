@@ -1,12 +1,28 @@
 import React from 'react';
-import { ScrollView, ScrollViewProps } from 'react-native';
+import {
+  Keyboard,
+  ScrollView,
+  ScrollViewProps,
+  TouchableWithoutFeedback,
+} from 'react-native';
 
-export default function AppScrollView(props: ScrollViewProps) {
+type Props = ScrollViewProps & {
+  children: React.ReactNode;
+};
+
+export default function AppScrollView({
+  children,
+  keyboardShouldPersistTaps = 'handled',
+  ...props
+}: Props) {
   return (
-    <ScrollView
-      keyboardShouldPersistTaps="always"
-      keyboardDismissMode="none"
-      {...props}
-    />
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <ScrollView
+        keyboardShouldPersistTaps={keyboardShouldPersistTaps}
+        {...props}
+      >
+        {children}
+      </ScrollView>
+    </TouchableWithoutFeedback>
   );
 }

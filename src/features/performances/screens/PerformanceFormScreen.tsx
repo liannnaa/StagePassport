@@ -5,48 +5,66 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+
 import AppScrollView from '../../../components/AppScrollView';
-import AppTextInput from '../../../components/AppTextInput';
 import ScreenContainer from '../../../components/ScreenContainer';
 import TopSheetModal from '../../../components/TopSheetModal';
 import PickerField from '../../../components/PickerField';
+
 import { RootStackParamList } from '../../../navigation/types';
 import { usePerformances } from '../context/PerformancesContext';
 import { buildShowId } from '../utils/showId';
 import { formatStoredDate, parseStoredDate } from '../utils/dates';
 import { colors, radius, spacing } from '../../../theme/tokens';
+
 import SearchablePickerField, {
   PickerOption,
 } from '../../catalog/components/SearchablePickerField';
+
 import AddVenueModal from '../../venues/components/AddVenueModal';
-import { findMatchingPerformanceByShowId } from '../../venues/utils/venueMatching';
+import AddBillingModal from '../../billings/components/AddBillingModal';
+import AddTagModal from '../../tags/components/AddTagModal';
 import AddGenreModal from '../../genres/components/AddGenreModal';
 import AddSubGenreModal from '../../genres/components/AddSubGenreModal';
+
+import { findMatchingPerformanceByShowId } from '../../venues/utils/venueMatching';
 import { findMatchingPerformanceByArtist } from '../../genres/utils/artistGenreMatching';
-import AddTagModal from '../../tags/components/AddTagModal';
+
+import FormField from '../components/FormField';
+import TagMultiSelectField from '../../tags/components/TagMultiSelectField';
+import { addUniqueTag, removeTag } from '../../tags/utils/tagSelection';
+import { useDirectCatalogAdd } from '../../catalog/hooks/useDirectCatalogAdd';
+import {
+  findExistingOption,
+  findExistingVenueOption,
+} from '../../catalog/utils/catalogOptionMatching';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PerformanceForm'>;
 
 export default function PerformanceFormScreen({ route, navigation }: Props) {
   const {
-  performances,
-  venueOptions,
-  genreOptions,
-  addVenueOption,
-  addGenreOption,
-  getSubGenreOptionsByGenreId,
-  addSubGenreOption,
-  addPerformance,
-  updatePerformance,
-  syncGenresForArtist,
-  getPerformanceById,
-  tagOptions,
-  addTagOption,
-} = usePerformances();
+    performances,
+    venueOptions,
+    genreOptions,
+    addVenueOption,
+    addGenreOption,
+    getSubGenreOptionsByGenreId,
+    addSubGenreOption,
+    addPerformance,
+    syncGenresForArtist,
+    getPerformanceById,
+    billingOptions,
+    addBillingOption,
+    tagOptions,
+    addTagOption,
+    deletePerformance,
+    updateConcertPerformances,
+  } = usePerformances();
+
+  const { addDirectly } = useDirectCatalogAdd();
 
   const existingPerformance =
     route.params.mode === 'edit'
@@ -63,7 +81,8 @@ export default function PerformanceFormScreen({ route, navigation }: Props) {
       date: existingPerformance
         ? parseStoredDate(existingPerformance.date)
         : new Date(),
-      tag: existingPerformance?.tag ?? '',
+      billing: existingPerformance?.billing ?? '',
+      tags: existingPerformance?.tags ?? [],
       genre: existingPerformance?.genre ?? '',
       subGenre: existingPerformance?.subGenre ?? '',
       showName: existingPerformance?.showName ?? '',
@@ -76,21 +95,25 @@ export default function PerformanceFormScreen({ route, navigation }: Props) {
   const [city, setCity] = useState(initialValues.city);
   const [date, setDate] = useState(initialValues.date);
   const [draftDate, setDraftDate] = useState(initialValues.date);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
+  const [billing, setBilling] = useState(initialValues.billing);
+  const [tags, setTags] = useState<string[]>(initialValues.tags);
   const [genre, setGenre] = useState(initialValues.genre);
   const [subGenre, setSubGenre] = useState(initialValues.subGenre);
   const [showName, setShowName] = useState(initialValues.showName);
-
   const [selectedGenreId, setSelectedGenreId] = useState<string | null>(null);
 
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [tag, setTag] = useState(initialValues.tag);
-  const [isAddTagModalVisible, setIsAddTagModalVisible] = useState(false);
-  const [pendingTagSearchText, setPendingTagSearchText] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
-  const [isVenueLocked, setIsVenueLocked] = useState(false);
   const [isAddVenueModalVisible, setIsAddVenueModalVisible] = useState(false);
   const [pendingVenueSearchText, setPendingVenueSearchText] = useState('');
+
+  const [isAddBillingModalVisible, setIsAddBillingModalVisible] = useState(false);
+  const [pendingBillingSearchText, setPendingBillingSearchText] = useState('');
+
+  const [isAddTagModalVisible, setIsAddTagModalVisible] = useState(false);
+  const [pendingTagSearchText, setPendingTagSearchText] = useState('');
 
   const [isAddGenreModalVisible, setIsAddGenreModalVisible] = useState(false);
   const [pendingGenreSearchText, setPendingGenreSearchText] = useState('');
@@ -102,10 +125,7 @@ export default function PerformanceFormScreen({ route, navigation }: Props) {
   const derivedShowId = buildShowId(showName, formattedDate);
 
   useEffect(() => {
-    if (!showName.trim()) {
-      setIsVenueLocked(false);
-      return;
-    }
+    if (!showName.trim()) return;
 
     const matched = findMatchingPerformanceByShowId(
       performances,
@@ -116,11 +136,7 @@ export default function PerformanceFormScreen({ route, navigation }: Props) {
     if (matched) {
       setVenue(matched.venue);
       setCity(matched.city);
-      setIsVenueLocked(true);
-      return;
     }
-
-    setIsVenueLocked(false);
   }, [derivedShowId, performances, existingPerformance?.id, showName]);
 
   useEffect(() => {
@@ -142,9 +158,7 @@ export default function PerformanceFormScreen({ route, navigation }: Props) {
 
     setSelectedGenreId(matchedGenre.id);
 
-    if (!subGenre.trim()) {
-      return;
-    }
+    if (!subGenre.trim()) return;
 
     const subGenreOptions = getSubGenreOptionsByGenreId(matchedGenre.id);
     const subGenreStillValid = subGenreOptions.some(
@@ -157,9 +171,7 @@ export default function PerformanceFormScreen({ route, navigation }: Props) {
   }, [genre, subGenre, genreOptions, getSubGenreOptionsByGenreId]);
 
   useEffect(() => {
-    if (!artist.trim()) {
-      return;
-    }
+    if (!artist.trim()) return;
 
     const matched = findMatchingPerformanceByArtist(
       performances,
@@ -188,46 +200,54 @@ export default function PerformanceFormScreen({ route, navigation }: Props) {
     setShowDatePicker(false);
   }
 
-  const tagPickerOptions = useMemo<PickerOption[]>(() => {
-    return tagOptions.map((option) => ({
-      id: option.id,
-      title: option.name,
-    }));
-  }, [tagOptions]);
+  function addTag(tagName: string) {
+    setTags((current) => addUniqueTag(current, tagName));
+  }
 
-  const venuePickerOptions = useMemo<PickerOption[]>(() => {
-    return venueOptions.map((option) => ({
-      id: option.id,
-      title: option.venueName,
-      subtitle: option.city,
-    }));
-  }, [venueOptions]);
+  function removeSelectedTag(tagName: string) {
+    setTags((current) => removeTag(current, tagName));
+  }
 
-  const genrePickerOptions = useMemo<PickerOption[]>(() => {
-    return genreOptions.map((option) => ({
-      id: option.id,
-      title: option.name,
-    }));
-  }, [genreOptions]);
+  const billingPickerOptions = useMemo<PickerOption[]>(
+    () => billingOptions.map((option) => ({ id: option.id, title: option.name })),
+    [billingOptions]
+  );
+
+  const tagPickerOptions = useMemo<PickerOption[]>(
+    () => tagOptions.map((option) => ({ id: option.id, title: option.name })),
+    [tagOptions]
+  );
+
+  const venuePickerOptions = useMemo<PickerOption[]>(
+    () =>
+      venueOptions.map((option) => ({
+        id: option.id,
+        title: option.venueName,
+        subtitle: option.city,
+      })),
+    [venueOptions]
+  );
+
+  const genrePickerOptions = useMemo<PickerOption[]>(
+    () => genreOptions.map((option) => ({ id: option.id, title: option.name })),
+    [genreOptions]
+  );
 
   const availableSubGenreOptions = useMemo(() => {
     if (!selectedGenreId) return [];
     return getSubGenreOptionsByGenreId(selectedGenreId);
   }, [selectedGenreId, getSubGenreOptionsByGenreId]);
 
-  const subGenrePickerOptions = useMemo<PickerOption[]>(() => {
-    return availableSubGenreOptions.map((option) => ({
-      id: option.id,
-      title: option.name,
-    }));
-  }, [availableSubGenreOptions]);
+  const subGenrePickerOptions = useMemo<PickerOption[]>(
+    () => availableSubGenreOptions.map((option) => ({ id: option.id, title: option.name })),
+    [availableSubGenreOptions]
+  );
 
   async function handleSave() {
+    if (isSaving) return;
+
     if (!artist.trim() || !showName.trim()) {
-      Alert.alert(
-        'Missing required fields',
-        'Artist and show name are required.'
-      );
+      Alert.alert('Missing required fields', 'Artist and show name are required.');
       return;
     }
 
@@ -236,42 +256,89 @@ export default function PerformanceFormScreen({ route, navigation }: Props) {
       venue: venue.trim(),
       city: city.trim(),
       date: formattedDate,
-      tag: tag.trim(),
+      billing: billing.trim(),
+      tags,
       genre: genre.trim(),
       subGenre: subGenre.trim(),
       showName: showName.trim(),
     };
 
     try {
+      setIsSaving(true);
+
       if (isEditMode && existingPerformance) {
-        await updatePerformance(existingPerformance.id, payload);
+        const concertRows = performances.filter(
+          (item) => item.showId === existingPerformance.showId
+        );
+
+        await updateConcertPerformances(existingPerformance.showId, {
+          shared: {
+            showName: payload.showName,
+            venue: payload.venue,
+            city: payload.city,
+            date: payload.date,
+          },
+          artists: concertRows.map((item) => ({
+            performanceId: item.id,
+            artist: item.id === existingPerformance.id ? payload.artist : item.artist,
+            billing: item.id === existingPerformance.id ? payload.billing : item.billing,
+            tags: item.id === existingPerformance.id ? payload.tags : item.tags,
+            genre: item.id === existingPerformance.id ? payload.genre : item.genre,
+            subGenre:
+              item.id === existingPerformance.id ? payload.subGenre : item.subGenre,
+          })),
+        });
       } else {
         await addPerformance(payload);
       }
 
-      await syncGenresForArtist(
-        artist.trim(),
-        genre.trim(),
-        subGenre.trim()
-      );
-
+      await syncGenresForArtist(artist.trim(), genre.trim(), subGenre.trim());
       navigation.goBack();
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Something went wrong.';
-      Alert.alert('Save failed', message);
+      Alert.alert(
+        'Save failed',
+        error instanceof Error ? error.message : 'Something went wrong.'
+      );
+    } finally {
+      setIsSaving(false);
     }
+  }
+
+  function handleDelete() {
+    if (isSaving || !isEditMode || !existingPerformance) return;
+
+    Alert.alert(
+      'Delete performance',
+      `Are you sure you want to delete ${existingPerformance.artist}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsSaving(true);
+              await deletePerformance(existingPerformance.id);
+              navigation.goBack();
+            } catch (error) {
+              Alert.alert(
+                'Delete failed',
+                error instanceof Error ? error.message : 'Something went wrong.'
+              );
+            } finally {
+              setIsSaving(false);
+            }
+          },
+        },
+      ]
+    );
   }
 
   return (
     <ScreenContainer
       showHeader
       title={isEditMode ? 'Edit Performance' : 'Add Performance'}
-      subtitle={
-        isEditMode
-          ? 'Update performance details'
-          : 'Create a new performance'
-      }
+      subtitle={isEditMode ? 'Update performance details' : 'Create a new performance'}
       showBackButton
       onBackPress={() => navigation.goBack()}
       rightActionLabel="Catalog"
@@ -279,11 +346,8 @@ export default function PerformanceFormScreen({ route, navigation }: Props) {
     >
       <AppScrollView contentContainerStyle={styles.container}>
         <FormField label="Artist *" value={artist} onChangeText={setArtist} />
-        <FormField
-          label="Show Name *"
-          value={showName}
-          onChangeText={setShowName}
-        />
+
+        <FormField label="Show Name *" value={showName} onChangeText={setShowName} />
 
         <PickerField
           label="Date *"
@@ -304,44 +368,86 @@ export default function PerformanceFormScreen({ route, navigation }: Props) {
             display={Platform.OS === 'ios' ? 'spinner' : 'default'}
             themeVariant="dark"
             onChange={(_, selectedDate) => {
-              if (selectedDate) {
-                setDraftDate(selectedDate);
-              }
+              if (selectedDate) setDraftDate(selectedDate);
             }}
           />
         </TopSheetModal>
 
         <SearchablePickerField
-          label="Tag"
-          selectedLabel={tag}
-          placeholder="Choose or add a tag"
-          options={tagPickerOptions}
+          label="Billing"
+          selectedLabel={billing}
+          placeholder="Choose or add a billing"
+          options={billingPickerOptions}
           onSelect={(option) => {
-            const selected = tagOptions.find((item) => item.id === option.id);
-            if (!selected) return;
-
-            setTag(selected.name);
+            const selected = billingOptions.find((item) => item.id === option.id);
+            if (selected) setBilling(selected.name);
           }}
-          onClear={() => {
-            setTag('');
-          }}
+          onClear={() => setBilling('')}
           onAddNew={(searchText) => {
-            setPendingTagSearchText(searchText);
-            setIsAddTagModalVisible(true);
+            const trimmed = searchText.trim();
+            if (!trimmed) {
+              setPendingBillingSearchText('');
+              setIsAddBillingModalVisible(true);
+              return;
+            }
+
+            const existing = findExistingOption(billingPickerOptions, trimmed);
+
+            if (existing) {
+              Alert.alert('Using existing option');
+              setBilling(existing.title);
+              return;
+            }
+
+            addDirectly({
+              value: trimmed,
+              addOption: addBillingOption,
+              onSuccess: (added) => setBilling(added.name),
+              errorTitle: 'Unable to add billing',
+            });
           }}
-          addNewLabel="Add tag"
+          addNewLabel="Add billing"
+        />
+
+        <TagMultiSelectField
+          tags={tags}
+          options={tagPickerOptions}
+          onAddTag={addTag}
+          onRemoveTag={removeSelectedTag}
+          onClearTags={() => setTags([])}
+          onAddNew={(searchText) => {
+            const trimmed = searchText.trim();
+
+            if (!trimmed) {
+              setPendingTagSearchText('');
+              setIsAddTagModalVisible(true);
+              return;
+            }
+
+            const existing = findExistingOption(tagPickerOptions, trimmed);
+
+            if (existing) {
+              Alert.alert('Using existing option');
+              addTag(existing.title);
+              return;
+            }
+
+            addDirectly({
+              value: trimmed,
+              addOption: addTagOption,
+              onSuccess: (added) => addTag(added.name),
+              errorTitle: 'Unable to add tag',
+            });
+          }}
         />
 
         <SearchablePickerField
           label="Venue"
-          selectedLabel={[venue, city]
-            .filter((v) => v.trim().length > 0)
-            .join(' • ')}
+          selectedLabel={[venue, city].filter((value) => value.trim()).join(' • ')}
           placeholder="Choose or add a venue"
           options={venuePickerOptions}
-          disabled={isVenueLocked}
           onSelect={(option) => {
-            const selected = venueOptions.find((v) => v.id === option.id);
+            const selected = venueOptions.find((item) => item.id === option.id);
             if (!selected) return;
 
             setVenue(selected.venueName);
@@ -352,14 +458,31 @@ export default function PerformanceFormScreen({ route, navigation }: Props) {
             setCity('');
           }}
           onAddNew={(searchText) => {
-            setPendingVenueSearchText(searchText);
+            const trimmed = searchText.trim();
+
+            if (!trimmed) {
+              setPendingVenueSearchText('');
+              setIsAddVenueModalVisible(true);
+              return;
+            }
+
+            const existing = findExistingVenueOption(venuePickerOptions, trimmed);
+
+            if (existing) {
+              Alert.alert('Using existing option');
+              setVenue(existing.title);
+              setCity(existing.subtitle ?? '');
+              return;
+            }
+
+            setPendingVenueSearchText(trimmed);
             setIsAddVenueModalVisible(true);
           }}
         />
 
-        {isVenueLocked ? (
+        {showName.trim() ? (
           <Text style={styles.lockedHelperText}>
-            Venue is locked because another performance already uses this show ID.
+            Saving will update venue for all performances under this concert.
           </Text>
         ) : null}
 
@@ -369,7 +492,7 @@ export default function PerformanceFormScreen({ route, navigation }: Props) {
           placeholder="Choose or add a genre"
           options={genrePickerOptions}
           onSelect={(option) => {
-            const selected = genreOptions.find((g) => g.id === option.id);
+            const selected = genreOptions.find((item) => item.id === option.id);
             if (!selected) return;
 
             setGenre(selected.name);
@@ -378,41 +501,77 @@ export default function PerformanceFormScreen({ route, navigation }: Props) {
           }}
           onClear={() => {
             setGenre('');
-            setSubGenre('');
             setSelectedGenreId(null);
+            setSubGenre('');
           }}
           onAddNew={(searchText) => {
-            setPendingGenreSearchText(searchText);
-            setIsAddGenreModalVisible(true);
+            const trimmed = searchText.trim();
+
+            if (!trimmed) {
+              setPendingGenreSearchText('');
+              setIsAddGenreModalVisible(true);
+              return;
+            }
+
+            const existing = findExistingOption(genrePickerOptions, trimmed);
+
+            if (existing) {
+              Alert.alert('Using existing option');
+              setGenre(existing.title);
+              setSelectedGenreId(existing.id);
+              setSubGenre('');
+              return;
+            }
+
+            addDirectly({
+              value: trimmed,
+              addOption: addGenreOption,
+              onSuccess: (added) => {
+                setGenre(added.name);
+                setSelectedGenreId(added.id);
+                setSubGenre('');
+              },
+              errorTitle: 'Unable to add genre',
+            });
           }}
         />
 
         <SearchablePickerField
           label="Sub-Genre"
           selectedLabel={subGenre}
-          placeholder={
-            selectedGenreId
-              ? 'Choose or add a sub-genre'
-              : 'Select a genre first'
-          }
+          placeholder={selectedGenreId ? 'Choose or add a sub-genre' : 'Select a genre first'}
           options={subGenrePickerOptions}
           disabled={!selectedGenreId}
           onSelect={(option) => {
-            const selected = availableSubGenreOptions.find(
-              (s) => s.id === option.id
-            );
-            if (!selected) return;
-
-            setSubGenre(selected.name);
+            const selected = availableSubGenreOptions.find((item) => item.id === option.id);
+            if (selected) setSubGenre(selected.name);
           }}
-          onClear={() => {
-            setSubGenre('');
-          }}
+          onClear={() => setSubGenre('')}
           onAddNew={(searchText) => {
             if (!selectedGenreId) return;
 
-            setPendingSubGenreSearchText(searchText);
-            setIsAddSubGenreModalVisible(true);
+            const trimmed = searchText.trim();
+
+            if (!trimmed) {
+              setPendingSubGenreSearchText('');
+              setIsAddSubGenreModalVisible(true);
+              return;
+            }
+
+            const existing = findExistingOption(subGenrePickerOptions, trimmed);
+
+            if (existing) {
+              Alert.alert('Using existing option');
+              setSubGenre(existing.title);
+              return;
+            }
+
+            addDirectly({
+              value: trimmed,
+              addOption: (name) => addSubGenreOption(selectedGenreId, genre, name),
+              onSuccess: (added) => setSubGenre(added.name),
+              errorTitle: 'Unable to add sub-genre',
+            });
           }}
         />
 
@@ -422,44 +581,83 @@ export default function PerformanceFormScreen({ route, navigation }: Props) {
           </Text>
         ) : null}
 
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+        <TouchableOpacity
+          style={[styles.saveButton, isSaving && styles.disabledButton]}
+          onPress={handleSave}
+          disabled={isSaving}
+        >
           <Text style={styles.saveButtonText}>
-            {isEditMode ? 'Save Changes' : 'Add Performance'}
+            {isSaving
+              ? isEditMode
+                ? 'Saving Performance...'
+                : 'Adding Performance...'
+              : isEditMode
+              ? 'Save Changes'
+              : 'Add Performance'}
           </Text>
         </TouchableOpacity>
+
+        {isEditMode ? (
+          <TouchableOpacity
+            style={[styles.deleteButton, isSaving && styles.disabledButton]}
+            onPress={handleDelete}
+            disabled={isSaving}
+          >
+            <Text style={styles.deleteButtonText}>Delete Performance</Text>
+          </TouchableOpacity>
+        ) : null}
       </AppScrollView>
+
+      <AddBillingModal
+        visible={isAddBillingModalVisible}
+        initialBillingName={pendingBillingSearchText}
+        onClose={() => setIsAddBillingModalVisible(false)}
+        onSave={async (newBillingName) => {
+          const existing = findExistingOption(billingPickerOptions, newBillingName);
+
+          if (existing) {
+            Alert.alert('Using existing option');
+            setBilling(existing.title);
+            setIsAddBillingModalVisible(false);
+            return;
+          }
+
+          try {
+            const added = await addBillingOption(newBillingName);
+            setBilling(added.name);
+            setIsAddBillingModalVisible(false);
+          } catch (error) {
+            Alert.alert(
+              'Unable to add billing',
+              error instanceof Error ? error.message : 'Something went wrong.'
+            );
+          }
+        }}
+      />
 
       <AddTagModal
         visible={isAddTagModalVisible}
         initialTagName={pendingTagSearchText}
         onClose={() => setIsAddTagModalVisible(false)}
         onSave={async (newTagName) => {
+          const existing = findExistingOption(tagPickerOptions, newTagName);
+
+          if (existing) {
+            Alert.alert('Using existing option');
+            addTag(existing.title);
+            setIsAddTagModalVisible(false);
+            return;
+          }
+
           try {
             const added = await addTagOption(newTagName);
-            setTag(added.name);
+            addTag(added.name);
             setIsAddTagModalVisible(false);
           } catch (error) {
-            const message =
-              error instanceof Error ? error.message : 'Something went wrong.';
-            Alert.alert('Unable to add tag', message);
-          }
-        }}
-      />
-
-      <AddVenueModal
-        visible={isAddVenueModalVisible}
-        initialVenueName={pendingVenueSearchText}
-        onClose={() => setIsAddVenueModalVisible(false)}
-        onSave={async (newVenueName, newCity) => {
-          try {
-            const added = await addVenueOption(newVenueName, newCity);
-            setVenue(added.venueName);
-            setCity(added.city);
-            setIsAddVenueModalVisible(false);
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : 'Something went wrong.';
-            Alert.alert('Unable to add venue', message);
+            Alert.alert(
+              'Unable to add tag',
+              error instanceof Error ? error.message : 'Something went wrong.'
+            );
           }
         }}
       />
@@ -469,6 +667,17 @@ export default function PerformanceFormScreen({ route, navigation }: Props) {
         initialGenreName={pendingGenreSearchText}
         onClose={() => setIsAddGenreModalVisible(false)}
         onSave={async (newGenreName) => {
+          const existing = findExistingOption(genrePickerOptions, newGenreName);
+
+          if (existing) {
+            Alert.alert('Using existing option');
+            setGenre(existing.title);
+            setSelectedGenreId(existing.id);
+            setSubGenre('');
+            setIsAddGenreModalVisible(false);
+            return;
+          }
+
           try {
             const added = await addGenreOption(newGenreName);
             setGenre(added.name);
@@ -476,9 +685,10 @@ export default function PerformanceFormScreen({ route, navigation }: Props) {
             setSubGenre('');
             setIsAddGenreModalVisible(false);
           } catch (error) {
-            const message =
-              error instanceof Error ? error.message : 'Something went wrong.';
-            Alert.alert('Unable to add genre', message);
+            Alert.alert(
+              'Unable to add genre',
+              error instanceof Error ? error.message : 'Something went wrong.'
+            );
           }
         }}
       />
@@ -491,19 +701,57 @@ export default function PerformanceFormScreen({ route, navigation }: Props) {
         onSave={async (newSubGenreName) => {
           if (!selectedGenreId) return;
 
-          try {
-            const added = await addSubGenreOption(
-              selectedGenreId,
-              genre,
-              newSubGenreName
-            );
+          const existing = findExistingOption(subGenrePickerOptions, newSubGenreName);
 
+          if (existing) {
+            Alert.alert('Using existing option');
+            setSubGenre(existing.title);
+            setIsAddSubGenreModalVisible(false);
+            return;
+          }
+
+          try {
+            const added = await addSubGenreOption(selectedGenreId, genre, newSubGenreName);
             setSubGenre(added.name);
             setIsAddSubGenreModalVisible(false);
           } catch (error) {
-            const message =
-              error instanceof Error ? error.message : 'Something went wrong.';
-            Alert.alert('Unable to add sub-genre', message);
+            Alert.alert(
+              'Unable to add sub-genre',
+              error instanceof Error ? error.message : 'Something went wrong.'
+            );
+          }
+        }}
+      />
+
+      <AddVenueModal
+        visible={isAddVenueModalVisible}
+        initialVenueName={pendingVenueSearchText}
+        onClose={() => setIsAddVenueModalVisible(false)}
+        onSave={async (newVenueName, newCity) => {
+          const existing = findExistingVenueOption(
+            venuePickerOptions,
+            newVenueName,
+            newCity
+          );
+
+          if (existing) {
+            Alert.alert('Using existing option');
+            setVenue(existing.title);
+            setCity(existing.subtitle ?? '');
+            setIsAddVenueModalVisible(false);
+            return;
+          }
+
+          try {
+            const added = await addVenueOption(newVenueName, newCity);
+            setVenue(added.venueName);
+            setCity(added.city);
+            setIsAddVenueModalVisible(false);
+          } catch (error) {
+            Alert.alert(
+              'Unable to add venue',
+              error instanceof Error ? error.message : 'Something went wrong.'
+            );
           }
         }}
       />
@@ -511,57 +759,10 @@ export default function PerformanceFormScreen({ route, navigation }: Props) {
   );
 }
 
-type FormFieldProps = {
-  label: string;
-  value: string;
-  onChangeText: (value: string) => void;
-};
-
-function FormField({ label, value, onChangeText }: FormFieldProps) {
-  return (
-    <View style={styles.fieldContainer}>
-      <Text style={styles.label}>{label}</Text>
-      <AppTextInput
-        value={value}
-        onChangeText={onChangeText}
-        style={styles.input}
-        placeholderTextColor={colors.textMuted}
-      />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: {
     paddingTop: spacing.lg,
     paddingBottom: spacing.xl,
-  },
-  fieldContainer: {
-    marginBottom: spacing.md,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    marginBottom: 6,
-  },
-  input: {
-    backgroundColor: colors.inputBackground,
-    borderRadius: radius.md,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: colors.textPrimary,
-  },
-  readOnlyBox: {
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: radius.md,
-    paddingHorizontal: 12,
-    paddingVertical: 14,
-  },
-  readOnlyText: {
-    fontSize: 16,
-    color: colors.textSecondary,
   },
   lockedHelperText: {
     fontSize: 12,
@@ -580,5 +781,20 @@ const styles = StyleSheet.create({
     color: colors.accentTextOnAccent,
     fontSize: 16,
     fontWeight: '700',
+  },
+  deleteButton: {
+    marginTop: spacing.md,
+    backgroundColor: colors.destructive,
+    paddingVertical: 14,
+    borderRadius: radius.lg,
+    alignItems: 'center',
+  },
+  deleteButtonText: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
 });

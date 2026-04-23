@@ -2,8 +2,9 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import AppCard from '../../../components/AppCard';
 import { Performance } from '../types/performance';
-import { spacing } from '../../../theme/tokens';
+import { spacing, colors } from '../../../theme/tokens';
 import { cardStyles } from '../../../theme/cardStyles';
+
 
 type PerformanceCardProps = {
   performance: Performance;
@@ -22,6 +23,9 @@ export default function PerformanceCard({
   const genreText = [performance.genre, performance.subGenre].filter(
     (value) => value.trim().length > 0
   ).join(' • ');
+
+  const primaryTag = performance.tags[0];
+  const extraTagCount = Math.max(performance.tags.length - 1, 0);
 
   return (
     <AppCard onPress={onPress}>
@@ -54,13 +58,22 @@ export default function PerformanceCard({
           <View style={[cardStyles.rightColumn, styles.rightColumn]}>
             <Text style={cardStyles.dateText}>{performance.date}</Text>
 
-            {performance.tag ? (
+            {performance.billing ? (
               <View style={cardStyles.pillBadge}>
-                <Text style={cardStyles.pillBadgeText}>{performance.tag}</Text>
+                <Text style={cardStyles.pillBadgeText}>{performance.billing}</Text>
               </View>
             ) : (
               <View style={styles.pillSpacer} />
             )}
+
+            {primaryTag ? (
+              <View style={styles.tagSummaryBadge}>
+                <Text style={styles.tagSummaryText} numberOfLines={1}>
+                  {primaryTag}
+                  {extraTagCount > 0 ? ` +${extraTagCount}` : ''}
+                </Text>
+              </View>
+            ) : null}
           </View>
         </View>
     </AppCard>
@@ -77,5 +90,18 @@ const styles = StyleSheet.create({
   },
   pillSpacer: {
     height: 28,
+  },
+  tagSummaryBadge: {
+    marginTop: spacing.xs,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: 999,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    maxWidth: 88,
+  },
+  tagSummaryText: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

@@ -6,6 +6,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Keyboard,
 } from 'react-native';
 import { colors, spacing } from '../theme/tokens';
 import { dismissKeyboardAndRun } from '../utils/dismissKeyboardAndRun';
@@ -28,6 +29,7 @@ export default function TopSheetModal({
   children,
 }: TopSheetModalProps) {
   function handleClose() {
+    Keyboard.dismiss();
     dismissKeyboardAndRun(onClose);
   }
 
@@ -54,7 +56,10 @@ export default function TopSheetModal({
           <View style={styles.content}>{children}</View>
         </View>
 
-        <Pressable style={styles.backdrop} onPress={handleClose} />
+        <Pressable style={styles.backdrop} onPress={() => {
+          Keyboard.dismiss();
+          handleClose();
+        }} />
       </View>
     </Modal>
   );

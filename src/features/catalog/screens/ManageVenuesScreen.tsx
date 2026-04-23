@@ -22,29 +22,44 @@ export default function ManageVenuesScreen({ navigation }: Props) {
 
   const [showAddVenueModal, setShowAddVenueModal] = useState(false);
 
-  async function handleRemoveVenue(id: string) {
+  async function handleRemoveVenue(id: string, name: string) {
     if (isVenueOptionInUse(id)) {
       Alert.alert(
-        'Cannot remove venue',
-        'This venue is used by existing performances.'
+        'Venue is in use',
+        'Open the usage list to replace or remove this venue from performances first.'
       );
       return;
     }
 
-    try {
-      await deleteVenueOption(id);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Something went wrong.';
-      Alert.alert('Unable to remove venue', message);
-    }
+    Alert.alert(
+      'Remove venue',
+      `Are you sure you want to remove "${name}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteVenueOption(id);
+            } catch (error) {
+              const message =
+                error instanceof Error ? error.message : 'Something went wrong.';
+              Alert.alert('Unable to remove venue', message);
+            }
+          },
+        },
+      ]
+    );
   }
 
   return (
     <ScreenContainer
       showHeader
       title="Venues"
-      subtitle="Manage venue and city pairs"
+      subtitle={`${venueOptions.length} ${
+        venueOptions.length === 1 ? 'venue' : 'venues'
+      }`}
       showBackButton
       onBackPress={() => navigation.goBack()}
       rightActionLabel="Add"
@@ -57,22 +72,31 @@ export default function ManageVenuesScreen({ navigation }: Props) {
             body="Add a venue to build your catalog."
           />
         ) : (
-          venueOptions.map((option) => (
-            <CatalogRow
-              key={option.id}
-              title={option.venueName}
-              subtitle={option.city}
-              disabled={isVenueOptionInUse(option.id)}
-              disabledReason={
-                isVenueOptionInUse(option.id)
-                  ? 'Used by existing performances'
-                  : undefined
-              }
-              onDelete={() => {
-                void handleRemoveVenue(option.id);
-              }}
-            />
-          ))
+          venueOptions.map((venue) => {
+            const inUse = isVenueOptionInUse(venue.id);
+
+            return (
+              <CatalogRow
+                key={venue.id}
+                title={venue.venueName}
+                subtitle={venue.city}
+                inUse={inUse}
+                usageLabel={
+                  inUse ? 'Used by existing performances' : undefined
+                }
+                onViewUsage={() =>
+                  navigation.navigate('CatalogUsage', {
+                    type: 'venue',
+                    id: venue.id,
+                    label: [venue.venueName, venue.city]
+                      .filter((value) => value.trim().length > 0)
+                      .join(' • '),
+                  })
+                }
+                onDelete={() => handleRemoveVenue(venue.id, venue.venueName)}
+              />
+            );
+          })
         )}
       </AppScrollView>
 

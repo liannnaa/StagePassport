@@ -86,7 +86,8 @@ describe('PerformanceDetailScreen', () => {
       venue: '',
       city: '',
       date: '04-21-26',
-      tag: '',
+      billing: '',
+      tags: ['Favorite', 'Seen Live'],
       genre: 'Indie',
       subGenre: 'Indie Pop',
       showId: 'faye-show-04-21-26',
@@ -110,6 +111,7 @@ describe('PerformanceDetailScreen', () => {
     expect(screen.getByText('Atlanta Show')).toBeTruthy();
     expect(screen.getByText('Indie')).toBeTruthy();
     expect(screen.getByText('Indie Pop')).toBeTruthy();
+    expect(screen.getByText('Favorite • Seen Live')).toBeTruthy();
   });
 
   it('renders fallback when performance is not found', () => {

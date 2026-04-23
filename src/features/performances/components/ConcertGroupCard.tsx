@@ -4,6 +4,8 @@ import AppCard from '../../../components/AppCard';
 import { ConcertGroup } from '../types/performance';
 import { spacing } from '../../../theme/tokens';
 import { cardStyles } from '../../../theme/cardStyles';
+import { getBillingPriority } from '../utils/billingPriority';
+import { colors } from '../../../theme/tokens';
 
 type ConcertGroupCardProps = {
   group: ConcertGroup;
@@ -14,9 +16,12 @@ export default function ConcertGroupCard({
   group,
   onPress,
 }: ConcertGroupCardProps) {
-  const artistNames = Array.from(
-    new Set(group.performances.map((performance) => performance.artist))
-  );
+  const sortedPerformances = [...group.performances].sort((a, b) => {
+    const billingDiff = getBillingPriority(a.billing) - getBillingPriority(b.billing);
+    if (billingDiff !== 0) return billingDiff;
+
+    return a.artist.localeCompare(b.artist);
+  });
 
   const locationParts = [group.venue, group.city].filter(
     (value) => value.trim().length > 0
@@ -41,7 +46,19 @@ export default function ConcertGroupCard({
           ) : null}
 
           <Text style={cardStyles.tertiaryText} numberOfLines={1}>
-            {artistNames.join(', ')}
+            {sortedPerformances.map((p, index) => {
+              const isHeadliner = p.billing?.toLowerCase().trim() === 'headliner';
+
+              return (
+                <Text key={p.id}>
+                  <Text style={isHeadliner && styles.headliner}>
+                    {p.artist}
+                  </Text>
+
+                  {index < sortedPerformances.length - 1 ? ', ' : ''}
+                </Text>
+              );
+            })}
           </Text>
         </View>
 
@@ -64,5 +81,9 @@ const styles = StyleSheet.create({
   },
   rightColumn: {
     minWidth: 72,
+  },
+  headliner: {
+    fontWeight: '700',
+    color: colors.accent,
   },
 });

@@ -18,6 +18,12 @@ export default function ManageCatalogScreen({ navigation }: Props) {
     >
       <View style={styles.container}>
         <CatalogLinkCard
+          title="Billings"
+          subtitle="Manage reusable billings"
+          onPress={() => navigation.navigate('ManageBillings')}
+        />
+
+        <CatalogLinkCard
           title="Tags"
           subtitle="Manage reusable tags"
           onPress={() => navigation.navigate('ManageTags')}

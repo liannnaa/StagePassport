@@ -132,7 +132,7 @@ export default function AuthScreen() {
 
   return (
     <ScreenContainer>
-      <AppScrollView contentContainerStyle={styles.container}>
+      <AppScrollView>
         <View style={styles.hero}>
           <Image
             source={require('../../../../assets/icon.png')}
@@ -265,18 +265,15 @@ function ModeButton({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xl,
-  },
   hero: {
-    paddingTop: spacing.xl * 3,
-    marginBottom: spacing.xl * 1.5,
+    marginBottom: spacing.lg,
+    marginTop: spacing.xl*2,
     alignItems: 'center',
   },
   icon: {
-    width: 120,
-    height: 120,
+    width: 80,
+    height: 80,
+    marginTop: spacing.xl,
     marginBottom: spacing.lg,
   },
   heroTitle: {
@@ -292,6 +289,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     maxWidth: 260,
+    minHeight: 36,
+    lineHeight: 18,
   },
   modeRow: {
     flexDirection: 'row',

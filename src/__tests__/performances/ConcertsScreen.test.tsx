@@ -4,8 +4,19 @@ import ConcertsScreen from '../../features/performances/screens/ConcertsScreen';
 
 const mockSetConcertSearchQuery = jest.fn();
 const mockSetConcertSortMode = jest.fn();
-
 const mockNavigate = jest.fn();
+
+const mockConcertGroups = [
+  {
+    showId: 'faye-show-04-21-26',
+    showName: 'Atlanta Show',
+    date: '04-21-26',
+    venue: 'Fox Theatre',
+    city: 'Atlanta',
+    performances: [],
+    artistCount: 1,
+  },
+];
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
@@ -17,11 +28,7 @@ jest.mock('../../components/ScreenContainer', () => {
   const React = require('react');
   const { Text } = require('react-native');
 
-  return function MockScreenContainer({
-    children,
-    title,
-    subtitle,
-  }: any) {
+  return function MockScreenContainer({ children, title, subtitle }: any) {
     return React.createElement(
       React.Fragment,
       null,
@@ -34,6 +41,7 @@ jest.mock('../../components/ScreenContainer', () => {
 
 jest.mock('../../components/AppScrollView', () => {
   const React = require('react');
+
   return function MockAppScrollView({ children }: any) {
     return React.createElement(React.Fragment, null, children);
   };
@@ -43,11 +51,11 @@ jest.mock('../../components/SearchBar', () => {
   const React = require('react');
   const { TextInput } = require('react-native');
 
-  return function MockSearchBar({ value, onChangeText }: any) {
+  return function MockSearchBar({ value, onChangeText, placeholder }: any) {
     return React.createElement(TextInput, {
       value,
       onChangeText,
-      placeholder: 'Search show, venue, city, artist...',
+      placeholder,
     });
   };
 });
@@ -112,17 +120,8 @@ describe('ConcertsScreen', () => {
     jest.clearAllMocks();
 
     mockUsePerformances.mockReturnValue({
-      filteredConcertGroups: [
-        {
-          showId: 'faye-show-04-21-26',
-          showName: 'Atlanta Show',
-          date: '04-21-26',
-          venue: 'Fox Theatre',
-          city: 'Atlanta',
-          performances: [],
-          artistCount: 1,
-        },
-      ],
+      filteredConcertGroups: mockConcertGroups,
+      concertGroups: mockConcertGroups,
       concertSearchQuery: '',
       setConcertSearchQuery: mockSetConcertSearchQuery,
       concertSortMode: 'newest',
@@ -142,6 +141,7 @@ describe('ConcertsScreen', () => {
   it('shows empty state when no concerts match', () => {
     mockUsePerformances.mockReturnValue({
       filteredConcertGroups: [],
+      concertGroups: [],
       concertSearchQuery: '',
       setConcertSearchQuery: mockSetConcertSearchQuery,
       concertSortMode: 'newest',

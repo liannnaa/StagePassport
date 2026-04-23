@@ -4,18 +4,30 @@ import PerformanceListScreen from '../../features/performances/screens/Performan
 
 const mockSetSearchQuery = jest.fn();
 const mockSetSortMode = jest.fn();
-const mockLogOut = jest.fn();
+const mockOpenAddMenu = jest.fn();
 
 const mockUsePerformances = jest.fn();
+
+const mockPerformance = {
+  id: 'p1',
+  artist: 'Faye Webster',
+  venue: 'Fox Theatre',
+  city: 'Atlanta',
+  date: '04-21-26',
+  billing: '',
+  tags: [],
+  genre: 'Indie',
+  subGenre: 'Indie Pop',
+  showId: 'atlanta-show-04-21-26',
+  showName: 'Atlanta Show',
+};
 
 jest.mock('../../features/performances/context/PerformancesContext', () => ({
   usePerformances: () => mockUsePerformances(),
 }));
 
-jest.mock('../../features/auth/context/AuthContext', () => ({
-  useAuth: () => ({
-    logOut: mockLogOut,
-  }),
+jest.mock('../../features/performances/utils/openAddMenu', () => ({
+  openAddMenu: (...args: unknown[]) => mockOpenAddMenu(...args),
 }));
 
 jest.mock('../../components/ScreenContainer', () => {
@@ -31,34 +43,34 @@ jest.mock('../../components/ScreenContainer', () => {
     title,
     subtitle,
   }: any) {
-    return React.createElement(
-      React.Fragment,
-      null,
-      title ? React.createElement(Text, null, title) : null,
-      subtitle ? React.createElement(Text, null, subtitle) : null,
-      leftActionLabel
-        ? React.createElement(
-            Pressable,
-            { onPress: onLeftActionPress },
-            React.createElement(Text, null, leftActionLabel)
-          )
-        : null,
-      rightActionLabel
-        ? React.createElement(
-            Pressable,
-            { onPress: onRightActionPress },
-            React.createElement(Text, null, rightActionLabel)
-          )
-        : null,
-      children
+    return (
+      <>
+        {title ? <Text>{title}</Text> : null}
+        {subtitle ? <Text>{subtitle}</Text> : null}
+
+        {leftActionLabel ? (
+          <Pressable onPress={onLeftActionPress}>
+            <Text>{leftActionLabel}</Text>
+          </Pressable>
+        ) : null}
+
+        {rightActionLabel ? (
+          <Pressable onPress={onRightActionPress}>
+            <Text>{rightActionLabel}</Text>
+          </Pressable>
+        ) : null}
+
+        {children}
+      </>
     );
   };
 });
 
 jest.mock('../../components/AppScrollView', () => {
   const React = require('react');
+
   return function MockAppScrollView({ children }: any) {
-    return React.createElement(React.Fragment, null, children);
+    return <>{children}</>;
   };
 });
 
@@ -66,12 +78,14 @@ jest.mock('../../components/SearchBar', () => {
   const React = require('react');
   const { TextInput } = require('react-native');
 
-  return function MockSearchBar({ value, onChangeText }: any) {
-    return React.createElement(TextInput, {
-      value,
-      onChangeText,
-      placeholder: 'Search artist, show name, venue, city...',
-    });
+  return function MockSearchBar({ value, onChangeText, placeholder }: any) {
+    return (
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+      />
+    );
   };
 });
 
@@ -80,19 +94,14 @@ jest.mock('../../components/SortPills', () => {
   const { Pressable, Text } = require('react-native');
 
   return function MockSortPills({ options, onChange }: any) {
-    return React.createElement(
-      React.Fragment,
-      null,
-      ...options.map((option: any) =>
-        React.createElement(
-          Pressable,
-          {
-            key: option.value,
-            onPress: () => onChange(option.value),
-          },
-          React.createElement(Text, null, option.label)
-        )
-      )
+    return (
+      <>
+        {options.map((option: any) => (
+          <Pressable key={option.value} onPress={() => onChange(option.value)}>
+            <Text>{option.label}</Text>
+          </Pressable>
+        ))}
+      </>
     );
   };
 });
@@ -102,11 +111,11 @@ jest.mock('../../components/EmptyState', () => {
   const { Text } = require('react-native');
 
   return function MockEmptyState({ title, body }: any) {
-    return React.createElement(
-      React.Fragment,
-      null,
-      React.createElement(Text, null, title),
-      React.createElement(Text, null, body)
+    return (
+      <>
+        <Text>{title}</Text>
+        <Text>{body}</Text>
+      </>
     );
   };
 });
@@ -116,11 +125,20 @@ jest.mock('../../features/performances/components/PerformanceCard', () => {
   const { Pressable, Text } = require('react-native');
 
   return function MockPerformanceCard({ performance, onPress }: any) {
-    return React.createElement(
-      Pressable,
-      { onPress },
-      React.createElement(Text, null, performance.showName)
+    return (
+      <Pressable onPress={onPress}>
+        <Text>{performance.showName}</Text>
+      </Pressable>
     );
+  };
+});
+
+jest.mock('../../features/performances/components/ResultCount', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+
+  return function MockResultCount({ count, total, singular, plural }: any) {
+    return <Text>{`${count} of ${total} ${total === 1 ? singular : plural}`}</Text>;
   };
 });
 
@@ -133,20 +151,8 @@ describe('PerformanceListScreen', () => {
     jest.clearAllMocks();
 
     mockUsePerformances.mockReturnValue({
-      filteredPerformances: [
-        {
-          id: 'p1',
-          artist: 'Faye Webster',
-          venue: 'Fox Theatre',
-          city: 'Atlanta',
-          date: '04-21-26',
-          tag: '',
-          genre: 'Indie',
-          subGenre: 'Indie Pop',
-          showId: 'atlanta-show-04-21-26',
-          showName: 'Atlanta Show',
-        },
-      ],
+      filteredPerformances: [mockPerformance],
+      performances: [mockPerformance],
       isLoading: false,
       searchQuery: '',
       setSearchQuery: mockSetSearchQuery,
@@ -163,11 +169,13 @@ describe('PerformanceListScreen', () => {
     expect(screen.getByText('Performances')).toBeTruthy();
     expect(screen.getByText('Track every performance')).toBeTruthy();
     expect(screen.getByText('Atlanta Show')).toBeTruthy();
+    expect(screen.getByText('1 of 1 performance')).toBeTruthy();
   });
 
   it('shows empty state when there are no matching performances', () => {
     mockUsePerformances.mockReturnValue({
       filteredPerformances: [],
+      performances: [mockPerformance],
       isLoading: false,
       searchQuery: '',
       setSearchQuery: mockSetSearchQuery,
@@ -183,6 +191,7 @@ describe('PerformanceListScreen', () => {
     expect(
       screen.getByText('Try a different search or add a new performance.')
     ).toBeTruthy();
+    expect(screen.getByText('0 of 1 performance')).toBeTruthy();
   });
 
   it('updates search query from user input', () => {
@@ -208,16 +217,14 @@ describe('PerformanceListScreen', () => {
     expect(mockSetSortMode).toHaveBeenCalledWith('artist');
   });
 
-  it('navigates to add performance when Add is pressed', () => {
+  it('opens add menu when Add is pressed', () => {
     const screen = render(
       <PerformanceListScreen navigation={navigation as any} route={{} as any} />
     );
 
     fireEvent.press(screen.getByText('Add'));
 
-    expect(navigation.navigate).toHaveBeenCalledWith('PerformanceForm', {
-      mode: 'add',
-    });
+    expect(mockOpenAddMenu).toHaveBeenCalledWith(navigation);
   });
 
   it('navigates to performance detail when a card is pressed', () => {
