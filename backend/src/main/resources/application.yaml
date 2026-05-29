@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: backend
+
+server:
+  port: 8080
+
+firebase:
+  service-account-path: secrets/firebase-service-account.json
