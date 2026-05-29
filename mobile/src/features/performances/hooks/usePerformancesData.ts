@@ -14,6 +14,7 @@ import { billingsRepository } from '../../billings/repository/billingsRepository
 
 import { TagOption } from '../../tags/types/tag';
 import { tagsRepository } from '../../tags/repository/tagsRepository';
+import { getPerformancesFromApi } from '../../../api/stagePassportApi';
 
 type AuthUser = {
   uid: string;
@@ -44,7 +45,7 @@ export function usePerformancesData(user: AuthUser) {
       return;
     }
 
-    const items = await performancesRepository.getAll(user.uid);
+    const items = await getPerformancesFromApi();
     setPerformances(items);
   }, [user]);
 
@@ -124,16 +125,13 @@ export function usePerformancesData(user: AuthUser) {
 
     setIsLoading(true);
 
-    const unsubscribePerformances = performancesRepository.subscribe(
-      user.uid,
-      (items) => {
-        setPerformances(items);
+    refreshPerformances()
+      .catch((error) => {
+        console.error('Failed to load performances from backend:', error);
+      })
+      .finally(() => {
         setIsLoading(false);
-      },
-      () => {
-        setIsLoading(false);
-      }
-    );
+      });
 
     const unsubscribeVenues = venueOptionsRepository.subscribe(
       user.uid,
@@ -158,7 +156,6 @@ export function usePerformancesData(user: AuthUser) {
     const unsubscribeTags = tagsRepository.subscribe(user.uid, setTagOptions);
 
     return () => {
-      unsubscribePerformances();
       unsubscribeVenues();
       unsubscribeGenres();
       unsubscribeSubGenres();
