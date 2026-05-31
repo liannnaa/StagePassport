@@ -34,6 +34,8 @@ export function PerformancesProvider({
     tagOptions,
     isLoading,
     refresh,
+    addPerformanceToState,
+    addPerformancesToState,
   } = usePerformancesData(user);
 
   const {
@@ -122,6 +124,8 @@ export function PerformancesProvider({
     user,
     performances,
     getArtistGenreDefault,
+    addPerformanceToState,
+    addPerformancesToState,
   });
 
   const value = useMemo<PerformancesContextValue>(

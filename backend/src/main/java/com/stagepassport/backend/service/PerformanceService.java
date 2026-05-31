@@ -1,5 +1,6 @@
 package com.stagepassport.backend.service;
 
+import com.stagepassport.backend.dto.PerformanceRequest;
 import com.stagepassport.backend.dto.PerformanceResponse;
 import com.stagepassport.backend.repository.PerformanceRepository;
 import org.springframework.stereotype.Service;
@@ -17,5 +18,13 @@ public class PerformanceService {
 
     public List<PerformanceResponse> getPerformancesForUser(String uid) throws Exception {
         return performanceRepository.findByUserId(uid);
+    }
+
+    public PerformanceResponse createPerformanceForUser(String uid, PerformanceRequest request) throws Exception {
+        return performanceRepository.insert(uid, request);
+    }
+
+    public List<PerformanceResponse> createPerformancesForUser(String uid, List<PerformanceRequest> requests) throws Exception {
+        return performanceRepository.insertMany(uid, requests);
     }
 }

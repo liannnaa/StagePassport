@@ -20,6 +20,7 @@ import {
 } from '../services/performancePayloadService';
 
 import { syncCatalogOptions as syncCatalogOptionsService } from '../services/catalogSyncService';
+import { createPerformanceFromApi, createPerformancesBatchFromApi } from '../../../api/stagePassportApi';
 
 type AuthUser = {
   uid: string;
@@ -29,6 +30,8 @@ type UsePerformanceActionsParams = {
   user: AuthUser;
   performances: Performance[];
   getArtistGenreDefault: (artistName: string) => ArtistGenreDefault | undefined;
+  addPerformanceToState: (performance: Performance) => void;
+  addPerformancesToState: (performances: Performance[]) => void;
 };
 
 function buildPerformanceKey(row: {
@@ -91,6 +94,8 @@ export function usePerformanceActions({
   user,
   performances,
   getArtistGenreDefault,
+  addPerformanceToState,
+  addPerformancesToState,
 }: UsePerformanceActionsParams) {
   const isSavingConcertRef = useRef(false);
   const isSavingArtistRef = useRef(false);
@@ -102,8 +107,8 @@ export function usePerformanceActions({
       }
 
       const performance = toPerformanceWithShowId(payload);
-
-      const id = await performancesRepository.insert(user.uid, performance);
+      const createdPerformance = await createPerformanceFromApi(payload);
+      addPerformanceToState(createdPerformance);
 
       await syncCatalogOptionsService(user.uid, [
         {
@@ -116,9 +121,9 @@ export function usePerformanceActions({
         },
       ]);
 
-      return id;
+      return createdPerformance.id;
     },
-    [user]
+    [user, addPerformanceToState]
   );
 
   const updatePerformance = useCallback(
@@ -326,7 +331,8 @@ export function usePerformanceActions({
       isSavingConcertRef.current = true;
 
       try {
-        await performancesRepository.insertMany(user.uid, performanceRows);
+        const createdPerformances = await createPerformancesBatchFromApi(performanceRows);
+        addPerformancesToState(createdPerformances);
 
         await syncCatalogOptionsService(
           user.uid,
@@ -470,7 +476,7 @@ export function usePerformanceActions({
         isSavingConcertRef.current = false;
       }
     },
-    [performances, getArtistGenreDefault, user]
+    [performances, getArtistGenreDefault, user, addPerformancesToState]
   );
 
   const addArtistPerformances = useCallback(
@@ -524,7 +530,8 @@ export function usePerformanceActions({
       isSavingArtistRef.current = true;
 
       try {
-        await performancesRepository.insertMany(user.uid, performanceRows);
+        const createdPerformances = await createPerformancesBatchFromApi(performanceRows);
+        addPerformancesToState(createdPerformances);
 
         await syncCatalogOptionsService(
           user.uid,
@@ -541,7 +548,7 @@ export function usePerformanceActions({
         isSavingArtistRef.current = false;
       }
     },
-    [user]
+    [user, addPerformancesToState]
   );
 
   const updateArtistPerformances = useCallback(

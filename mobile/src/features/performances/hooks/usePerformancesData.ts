@@ -39,6 +39,17 @@ export function usePerformancesData(user: AuthUser) {
     setIsLoading(false);
   }, []);
 
+  const addPerformanceToState = useCallback((performance: Performance) => {
+    setPerformances((current) => [performance, ...current]);
+  }, []);
+
+  const addPerformancesToState = useCallback(
+    (newPerformances: Performance[]) => {
+      setPerformances((current) => [...newPerformances, ...current]);
+    },
+    []
+  );
+
   const refreshPerformances = useCallback(async () => {
     if (!user) {
       setPerformances([]);
@@ -162,7 +173,7 @@ export function usePerformancesData(user: AuthUser) {
       unsubscribeBillings();
       unsubscribeTags();
     };
-  }, [user, clearData]);
+}, [user, clearData, refreshPerformances]);
 
   return {
     performances,
@@ -173,5 +184,7 @@ export function usePerformancesData(user: AuthUser) {
     tagOptions,
     isLoading,
     refresh,
+    addPerformanceToState,
+    addPerformancesToState,
   };
 }

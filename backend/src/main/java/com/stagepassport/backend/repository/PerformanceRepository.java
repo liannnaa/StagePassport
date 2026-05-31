@@ -5,6 +5,11 @@ import com.google.cloud.firestore.*;
 import com.google.firebase.cloud.FirestoreClient;
 import com.stagepassport.backend.dto.PerformanceResponse;
 import org.springframework.stereotype.Repository;
+import com.stagepassport.backend.dto.PerformanceRequest;
+import com.google.cloud.firestore.WriteBatch;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +25,9 @@ public class PerformanceRepository {
                 .document(uid)
                 .collection("performances");
 
-        ApiFuture<QuerySnapshot> future = performancesRef.get();
+        ApiFuture<QuerySnapshot> future = performancesRef
+            .orderBy("dateSortKey", Query.Direction.DESCENDING)
+            .get();
         List<QueryDocumentSnapshot> documents = future.get().getDocuments();
 
         List<PerformanceResponse> performances = new ArrayList<>();
@@ -55,5 +62,128 @@ public class PerformanceRepository {
                 .filter(String.class::isInstance)
                 .map(String.class::cast)
                 .toList();
+    }
+
+    public PerformanceResponse insert(String uid, PerformanceRequest request) throws Exception {
+        Firestore db = FirestoreClient.getFirestore();
+
+        DocumentReference ref = db
+                .collection("users")
+                .document(uid)
+                .collection("performances")
+                .document();
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("artist", request.artist());
+        data.put("venue", request.venue());
+        data.put("city", request.city());
+        data.put("date", request.date());
+        data.put("billing", request.billing());
+        data.put("tags", request.tags() == null ? List.of() : request.tags());
+        data.put("genre", request.genre());
+        data.put("subGenre", request.subGenre());
+        data.put("showName", request.showName());
+        data.put("showId", request.showId());
+        data.put("artistNormalized", normalizeText(request.artist()));
+        data.put("dateSortKey", toDateSortKey(request.date()));
+        data.put("createdAt", FieldValue.serverTimestamp());
+        data.put("updatedAt", FieldValue.serverTimestamp());
+
+        ref.set(data).get();
+
+        return new PerformanceResponse(
+            ref.getId(),
+            request.artist(),
+            request.billing(),
+            request.city(),
+            request.date(),
+            request.genre(),
+            request.showId(),
+            request.showName(),
+            request.subGenre(),
+            request.tags() == null ? List.of() : request.tags(),
+            request.venue()
+        );
+    }
+
+    private String normalizeText(String value) {
+        return value == null ? "" : value.trim().toLowerCase();
+    }
+
+    private String toDateSortKey(String date) {
+        if (date == null) return "";
+
+        String trimmedDate = date.trim();
+        String[] parts = trimmedDate.split("-");
+
+        if (parts.length == 3) {
+            String month = parts[0];
+            String day = parts[1];
+            String year = parts[2];
+            String fullYear = year.length() == 2 ? "20" + year : year;
+
+            return fullYear + "-"
+                    + month.formatted("%2s").replace(' ', '0') + "-"
+                    + day.formatted("%2s").replace(' ', '0');
+        }
+
+        return trimmedDate;
+    }
+
+    public List<PerformanceResponse> insertMany(String uid, List<PerformanceRequest> requests) throws Exception {
+        if (requests == null || requests.isEmpty()) {
+            return List.of();
+        }
+
+        Firestore db = FirestoreClient.getFirestore();
+
+        CollectionReference performancesRef = db
+                .collection("users")
+                .document(uid)
+                .collection("performances");
+
+        WriteBatch batch = db.batch();
+
+        List<PerformanceResponse> createdPerformances = new ArrayList<>();
+
+        for (PerformanceRequest request : requests) {
+            DocumentReference ref = performancesRef.document();
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("artist", request.artist());
+            data.put("venue", request.venue());
+            data.put("city", request.city());
+            data.put("date", request.date());
+            data.put("billing", request.billing());
+            data.put("tags", request.tags() == null ? List.of() : request.tags());
+            data.put("genre", request.genre());
+            data.put("subGenre", request.subGenre());
+            data.put("showName", request.showName());
+            data.put("showId", request.showId());
+            data.put("artistNormalized", normalizeText(request.artist()));
+            data.put("dateSortKey", toDateSortKey(request.date()));
+            data.put("createdAt", FieldValue.serverTimestamp());
+            data.put("updatedAt", FieldValue.serverTimestamp());
+
+            batch.set(ref, data);
+
+            createdPerformances.add(new PerformanceResponse(
+                    ref.getId(),
+                    request.artist(),
+                    request.billing(),
+                    request.city(),
+                    request.date(),
+                    request.genre(),
+                    request.showId(),
+                    request.showName(),
+                    request.subGenre(),
+                    request.tags() == null ? List.of() : request.tags(),
+                    request.venue()
+            ));
+        }
+
+        batch.commit().get();
+
+        return createdPerformances;
     }
 }
