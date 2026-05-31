@@ -30,6 +30,15 @@ import { TagOption } from '../../tags/types/tag';
 import { tagsRepository } from '../../tags/repository/tagsRepository';
 import { buildTagKey } from '../../tags/utils/tagKeys';
 
+import {
+  createBillingFromApi,
+  createTagFromApi,
+  createVenueFromApi,
+  createGenreFromApi,
+  createSubGenreFromApi,
+  getCatalogFromApi,
+} from '../../../api/stagePassportApi';
+
 type AuthUser = {
   uid: string;
 } | null | undefined;
@@ -42,6 +51,13 @@ type UseCatalogActionsParams = {
   subGenreOptions: SubGenreOption[];
   billingOptions: BillingOption[];
   tagOptions: TagOption[];
+  setCatalogState: (catalog: {
+    venues: VenueOption[];
+    genres: GenreOption[];
+    subGenres: SubGenreOption[];
+    billings: BillingOption[];
+    tags: TagOption[];
+  }) => void;
 };
 
 export function useCatalogActions({
@@ -52,18 +68,28 @@ export function useCatalogActions({
   subGenreOptions,
   billingOptions,
   tagOptions,
+  setCatalogState,
 }: UseCatalogActionsParams) {
   const catalogUsageCounts = useMemo(
     () => buildCatalogUsageCounts(performances),
     [performances]
   );
 
+  const refreshCatalogState = useCallback(async () => {
+    const catalog = await getCatalogFromApi();
+    setCatalogState(catalog);
+  }, [setCatalogState]);
+
   const addVenueOption = useCallback(
     async (venueName: string, city: string) => {
       if (!user) throw new Error('You must be logged in to add a venue.');
-      return venueOptionsRepository.insert(user.uid, venueName, city);
+
+      const added = await createVenueFromApi(venueName, city);
+      await refreshCatalogState();
+
+      return added;
     },
-    [user]
+    [user, refreshCatalogState]
   );
 
   const deleteVenueOption = useCallback(
@@ -88,9 +114,13 @@ export function useCatalogActions({
   const addGenreOption = useCallback(
     async (name: string) => {
       if (!user) throw new Error('You must be logged in to add a genre.');
-      return genresRepository.insertGenre(user.uid, name);
+
+      const added = await createGenreFromApi(name);
+      await refreshCatalogState();
+
+      return added;
     },
-    [user]
+    [user, refreshCatalogState]
   );
 
   const deleteGenreOption = useCallback(
@@ -118,12 +148,17 @@ export function useCatalogActions({
 
   const getAllSubGenreOptions = useCallback(() => subGenreOptions, [subGenreOptions]);
 
+
   const addSubGenreOption = useCallback(
     async (genreId: string, genreName: string, name: string) => {
       if (!user) throw new Error('You must be logged in to add a sub-genre.');
-      return genresRepository.insertSubGenre(user.uid, genreId, genreName, name);
+
+      const added = await createSubGenreFromApi(genreId, genreName, name);
+      await refreshCatalogState();
+
+      return added;
     },
-    [user]
+    [user, refreshCatalogState]
   );
 
   const deleteSubGenreOption = useCallback(
@@ -159,9 +194,13 @@ export function useCatalogActions({
   const addBillingOption = useCallback(
     async (name: string) => {
       if (!user) throw new Error('You must be logged in to add a billing.');
-      return billingsRepository.insert(user.uid, name);
+
+      const added = await createBillingFromApi(name);
+      await refreshCatalogState();
+
+      return added;
     },
-    [user]
+    [user, refreshCatalogState]
   );
 
   const deleteBillingOption = useCallback(
@@ -185,9 +224,13 @@ export function useCatalogActions({
   const addTagOption = useCallback(
     async (name: string) => {
       if (!user) throw new Error('You must be logged in to add a tag.');
-      return tagsRepository.insert(user.uid, name);
+
+      const added = await createTagFromApi(name);
+      await refreshCatalogState();
+
+      return added;
     },
-    [user]
+    [user, refreshCatalogState]
   );
 
   const deleteTagOption = useCallback(
@@ -234,7 +277,7 @@ export function useCatalogActions({
         subGenre.trim()
       );
 
-      await syncCatalogOptionsService(user.uid, [
+      const catalog = await syncCatalogOptionsService(user.uid, [
         {
           venue: '',
           city: '',
@@ -244,6 +287,7 @@ export function useCatalogActions({
           tags: [],
         },
       ]);
+      setCatalogState(catalog);
     },
     [user]
   );
@@ -396,7 +440,7 @@ export function useCatalogActions({
         });
       }
 
-      await syncCatalogOptionsService(
+      const catalog = await syncCatalogOptionsService(
         user.uid,
         usage.map((performance) => ({
           venue:
@@ -425,6 +469,7 @@ export function useCatalogActions({
               : performance.tags,
         }))
       );
+      setCatalogState(catalog);
     },
     [getCatalogUsage, tagOptions, user]
   );

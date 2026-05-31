@@ -1,8 +1,8 @@
 package com.stagepassport.backend.service;
 
-import com.stagepassport.backend.dto.PerformanceRequest;
-import com.stagepassport.backend.dto.PerformanceResponse;
-import com.stagepassport.backend.dto.PerformanceUpdateRequest;
+import com.stagepassport.backend.dto.performance.PerformanceRequest;
+import com.stagepassport.backend.dto.performance.PerformanceResponse;
+import com.stagepassport.backend.dto.performance.PerformanceUpdateRequest;
 import com.stagepassport.backend.repository.PerformanceRepository;
 import org.springframework.stereotype.Service;
 

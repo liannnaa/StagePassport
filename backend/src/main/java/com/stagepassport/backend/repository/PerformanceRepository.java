@@ -3,11 +3,11 @@ package com.stagepassport.backend.repository;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import com.google.firebase.cloud.FirestoreClient;
-import com.stagepassport.backend.dto.PerformanceResponse;
-import com.stagepassport.backend.dto.PerformanceUpdateRequest;
+import com.stagepassport.backend.dto.performance.PerformanceRequest;
+import com.stagepassport.backend.dto.performance.PerformanceResponse;
+import com.stagepassport.backend.dto.performance.PerformanceUpdateRequest;
 
 import org.springframework.stereotype.Repository;
-import com.stagepassport.backend.dto.PerformanceRequest;
 
 import java.util.HashMap;
 import java.util.Map;

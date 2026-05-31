@@ -42,6 +42,7 @@ export function PerformancesProvider({
     updatePerformancesInState,
     deletePerformancesFromState,
     updateArtistGenreInState,
+    setCatalogState,
   } = usePerformancesData(user);
 
   const {
@@ -108,6 +109,7 @@ export function PerformancesProvider({
     subGenreOptions,
     billingOptions,
     tagOptions,
+    setCatalogState,
   });
 
   const syncGenresForArtist = useCallback(
@@ -144,6 +146,7 @@ export function PerformancesProvider({
     deletePerformanceFromState,
     updatePerformancesInState,
     deletePerformancesFromState,
+    setCatalogState,
   });
 
   const value = useMemo<PerformancesContextValue>(

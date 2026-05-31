@@ -26,6 +26,10 @@ import {
   updatePerformancesBatchFromApi,
   deletePerformancesBatchFromApi,
 } from '../../../api/stagePassportApi';
+import { TagOption } from '../../tags/types/tag';
+import { BillingOption } from '../../billings/types/billing';
+import { GenreOption, SubGenreOption } from '../../genres/types/genre';
+import { VenueOption } from '../../venues/types/venue';
 
 type AuthUser = {
   uid: string;
@@ -41,6 +45,13 @@ type UsePerformanceActionsParams = {
   deletePerformanceFromState: (performanceId: string) => void;
   updatePerformancesInState: (performances: Performance[]) => void;
   deletePerformancesFromState: (performanceIds: string[]) => void;
+  setCatalogState: (catalog: {
+    venues: VenueOption[];
+    genres: GenreOption[];
+    subGenres: SubGenreOption[];
+    billings: BillingOption[];
+    tags: TagOption[];
+  }) => void;
 };
 
 function buildPerformanceKey(row: {
@@ -109,6 +120,7 @@ export function usePerformanceActions({
   deletePerformanceFromState,
   updatePerformancesInState,
   deletePerformancesFromState,
+  setCatalogState,
 }: UsePerformanceActionsParams) {
   const isSavingConcertRef = useRef(false);
   const isSavingArtistRef = useRef(false);
@@ -123,7 +135,7 @@ export function usePerformanceActions({
       const createdPerformance = await createPerformanceFromApi(payload);
       addPerformanceToState(createdPerformance);
 
-      await syncCatalogOptionsService(user.uid, [
+      const catalog = await syncCatalogOptionsService(user.uid, [
         {
           venue: performance.venue,
           city: performance.city,
@@ -133,7 +145,7 @@ export function usePerformanceActions({
           tags: performance.tags,
         },
       ]);
-
+      setCatalogState(catalog);
       return createdPerformance.id;
     },
     [user, addPerformanceToState]
@@ -153,7 +165,7 @@ export function usePerformanceActions({
         ...updatedPerformance,
       });
 
-      await syncCatalogOptionsService(user.uid, [
+      const catalog = await syncCatalogOptionsService(user.uid, [
         {
           venue: updatedPerformance.venue,
           city: updatedPerformance.city,
@@ -163,6 +175,7 @@ export function usePerformanceActions({
           tags: updatedPerformance.tags,
         },
       ]);
+      setCatalogState(catalog);
     },
     [user, updatePerformanceInState]
   );
@@ -346,7 +359,7 @@ export function usePerformanceActions({
         const createdPerformances = await createPerformancesBatchFromApi(performanceRows);
         addPerformancesToState(createdPerformances);
 
-        await syncCatalogOptionsService(
+        const catalog = await syncCatalogOptionsService(
           user.uid,
           performanceRows.map((row) => ({
             venue: row.venue,
@@ -357,6 +370,7 @@ export function usePerformanceActions({
             tags: row.tags,
           }))
         );
+        setCatalogState(catalog);
       } finally {
         isSavingConcertRef.current = false;
       }
@@ -471,7 +485,7 @@ export function usePerformanceActions({
         updatePerformancesInState(updatedPerformances);
         addPerformancesToState(createdPerformances);
 
-        await syncCatalogOptionsService(user.uid, [
+        const catalog = await syncCatalogOptionsService(user.uid, [
           ...updatePayloads.map((item) => ({
             venue: item.performance.venue,
             city: item.performance.city,
@@ -489,6 +503,7 @@ export function usePerformanceActions({
             tags: row.tags,
           })),
         ]);
+        setCatalogState(catalog);
       } finally {
         isSavingConcertRef.current = false;
       }
@@ -550,7 +565,7 @@ export function usePerformanceActions({
         const createdPerformances = await createPerformancesBatchFromApi(performanceRows);
         addPerformancesToState(createdPerformances);
 
-        await syncCatalogOptionsService(
+        const catalog = await syncCatalogOptionsService(
           user.uid,
           performanceRows.map((row) => ({
             venue: row.venue,
@@ -561,6 +576,7 @@ export function usePerformanceActions({
             tags: row.tags,
           }))
         );
+        setCatalogState(catalog);
       } finally {
         isSavingArtistRef.current = false;
       }
@@ -666,7 +682,7 @@ export function usePerformanceActions({
         updatePerformancesInState(updatedPerformances);
         addPerformancesToState(createdPerformances);
 
-        await syncCatalogOptionsService(user.uid, [
+        const catalog = await syncCatalogOptionsService(user.uid, [
           ...updatePayloads.map((item) => ({
             venue: item.performance.venue,
             city: item.performance.city,
@@ -684,6 +700,7 @@ export function usePerformanceActions({
             tags: row.tags,
           })),
         ]);
+        setCatalogState(catalog);
       } finally {
         isSavingArtistRef.current = false;
       }

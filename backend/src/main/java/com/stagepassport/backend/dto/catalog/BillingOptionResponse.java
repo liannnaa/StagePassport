@@ -1,4 +1,4 @@
-package com.stagepassport.backend.dto;
+package com.stagepassport.backend.dto.catalog;
 
 public record BillingOptionResponse(
         String id,

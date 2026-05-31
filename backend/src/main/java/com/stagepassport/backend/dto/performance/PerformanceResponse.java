@@ -1,4 +1,4 @@
-package com.stagepassport.backend.dto;
+package com.stagepassport.backend.dto.performance;
 
 import java.util.List;
 

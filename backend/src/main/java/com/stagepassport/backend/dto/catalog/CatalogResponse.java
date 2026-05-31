@@ -1,4 +1,4 @@
-package com.stagepassport.backend.dto;
+package com.stagepassport.backend.dto.catalog;
 
 import java.util.List;
 

@@ -1,6 +1,6 @@
 import { auth } from '../features/auth/services/firebase';
 import { Performance } from '../features/performances/types/performance';
-import { PerformancePayload } from '../features/performances/types/performanceContextTypes';
+import { PerformancePayload, CatalogSyncRow } from '../features/performances/types/performanceContextTypes';
 import { buildShowId } from '../features/performances/utils/showId';
 import { VenueOption } from '../features/venues/types/venue';
 import { GenreOption, SubGenreOption } from '../features/genres/types/genre';
@@ -199,6 +199,85 @@ export async function getCatalogFromApi(): Promise<CatalogResponse> {
 
   if (!res.ok) {
     throw new Error(`Failed to fetch catalog: ${res.status}`);
+  }
+
+  return res.json();
+}
+
+export async function createBillingFromApi(name: string): Promise<BillingOption> {
+  return createCatalogItem('/api/catalog/billings', { name });
+}
+
+export async function createTagFromApi(name: string): Promise<TagOption> {
+  return createCatalogItem('/api/catalog/tags', { name });
+}
+
+export async function createGenreFromApi(name: string): Promise<GenreOption> {
+  return createCatalogItem('/api/catalog/genres', { name });
+}
+
+export async function createVenueFromApi(
+  venueName: string,
+  city: string
+): Promise<VenueOption> {
+  return createCatalogItem('/api/catalog/venues', { venueName, city });
+}
+
+export async function createSubGenreFromApi(
+  genreId: string,
+  genreName: string,
+  name: string
+): Promise<SubGenreOption> {
+  return createCatalogItem('/api/catalog/subgenres', {
+    genreId,
+    genreName,
+    name,
+  });
+}
+
+async function createCatalogItem<T>(path: string, body: unknown): Promise<T> {
+  const token = await auth.currentUser?.getIdToken();
+
+  if (!token) {
+    throw new Error('User is not authenticated.');
+  }
+
+  const res = await fetch(`${API_URL}${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to create catalog item: ${res.status}`);
+  }
+
+  return res.json();
+}
+
+export async function syncCatalogFromApi(
+  rows: CatalogSyncRow[]
+): Promise<CatalogResponse> {
+  const token = await auth.currentUser?.getIdToken();
+
+  if (!token) {
+    throw new Error('User is not authenticated.');
+  }
+
+  const res = await fetch(`${API_URL}/api/catalog/sync`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(rows),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to sync catalog: ${res.status}`);
   }
 
   return res.json();

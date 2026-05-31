@@ -128,6 +128,23 @@ export function usePerformancesData(user: AuthUser) {
     setTagOptions(catalog.tags);
   }, [user]);
 
+  const setCatalogState = useCallback(
+    (catalog: {
+      venues: VenueOption[];
+      genres: GenreOption[];
+      subGenres: SubGenreOption[];
+      billings: BillingOption[];
+      tags: TagOption[];
+    }) => {
+      setVenueOptions(catalog.venues);
+      setGenreOptions(catalog.genres);
+      setSubGenreOptions(catalog.subGenres);
+      setBillingOptions(catalog.billings);
+      setTagOptions(catalog.tags);
+    },
+    []
+  );
+
   const refreshPerformances = useCallback(async () => {
     if (!user) {
       setPerformances([]);
@@ -232,5 +249,6 @@ export function usePerformancesData(user: AuthUser) {
     updatePerformancesInState,
     deletePerformancesFromState,
     updateArtistGenreInState,
+    setCatalogState,
   };
 }

@@ -1,13 +1,13 @@
 package com.stagepassport.backend.controller;
 
-import com.stagepassport.backend.dto.PerformanceResponse;
-import com.stagepassport.backend.dto.PerformanceUpdateRequest;
+import com.stagepassport.backend.dto.performance.PerformanceRequest;
+import com.stagepassport.backend.dto.performance.PerformanceResponse;
+import com.stagepassport.backend.dto.performance.PerformanceUpdateRequest;
 import com.stagepassport.backend.security.FirebaseAuthenticationToken;
 import com.stagepassport.backend.service.PerformanceService;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.stagepassport.backend.dto.PerformanceRequest;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.DeleteMapping;
