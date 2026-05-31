@@ -2,6 +2,18 @@ import { auth } from '../features/auth/services/firebase';
 import { Performance } from '../features/performances/types/performance';
 import { PerformancePayload } from '../features/performances/types/performanceContextTypes';
 import { buildShowId } from '../features/performances/utils/showId';
+import { VenueOption } from '../features/venues/types/venue';
+import { GenreOption, SubGenreOption } from '../features/genres/types/genre';
+import { BillingOption } from '../features/billings/types/billing';
+import { TagOption } from '../features/tags/types/tag';
+
+export type CatalogResponse = {
+  venues: VenueOption[];
+  billings: BillingOption[];
+  tags: TagOption[];
+  genres: GenreOption[];
+  subGenres: SubGenreOption[];
+};
 
 const API_URL = 'http://192.168.1.94:8080';
 
@@ -170,4 +182,24 @@ export async function deletePerformancesBatchFromApi(
   if (!res.ok) {
     throw new Error(`Failed to delete performances batch: ${res.status}`);
   }
+}
+
+export async function getCatalogFromApi(): Promise<CatalogResponse> {
+  const token = await auth.currentUser?.getIdToken();
+
+  if (!token) {
+    throw new Error('User is not authenticated.');
+  }
+
+  const res = await fetch(`${API_URL}/api/catalog`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch catalog: ${res.status}`);
+  }
+
+  return res.json();
 }

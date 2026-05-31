@@ -13,7 +13,7 @@ import { billingsRepository } from '../../billings/repository/billingsRepository
 
 import { TagOption } from '../../tags/types/tag';
 import { tagsRepository } from '../../tags/repository/tagsRepository';
-import { getPerformancesFromApi } from '../../../api/stagePassportApi';
+import { getPerformancesFromApi, getCatalogFromApi } from '../../../api/stagePassportApi';
 
 type AuthUser = {
   uid: string;
@@ -109,6 +109,25 @@ export function usePerformancesData(user: AuthUser) {
     []
   );
 
+  const refreshCatalog = useCallback(async () => {
+    if (!user) {
+      setVenueOptions([]);
+      setGenreOptions([]);
+      setSubGenreOptions([]);
+      setBillingOptions([]);
+      setTagOptions([]);
+      return;
+    }
+
+    const catalog = await getCatalogFromApi();
+
+    setVenueOptions(catalog.venues);
+    setGenreOptions(catalog.genres);
+    setSubGenreOptions(catalog.subGenres);
+    setBillingOptions(catalog.billings);
+    setTagOptions(catalog.tags);
+  }, [user]);
+
   const refreshPerformances = useCallback(async () => {
     if (!user) {
       setPerformances([]);
@@ -172,20 +191,9 @@ export function usePerformancesData(user: AuthUser) {
   const refresh = useCallback(async () => {
     await Promise.all([
       refreshPerformances(),
-      refreshVenueOptions(),
-      refreshGenres(),
-      refreshSubGenres(),
-      refreshBillings(),
-      refreshTags(),
+      refreshCatalog(),
     ]);
-  }, [
-    refreshPerformances,
-    refreshVenueOptions,
-    refreshGenres,
-    refreshSubGenres,
-    refreshBillings,
-    refreshTags,
-  ]);
+  }, [refreshPerformances, refreshCatalog]);
 
   useEffect(() => {
     if (!user) {
@@ -203,36 +211,10 @@ export function usePerformancesData(user: AuthUser) {
         setIsLoading(false);
       });
 
-    const unsubscribeVenues = venueOptionsRepository.subscribe(
-      user.uid,
-      setVenueOptions
-    );
-
-    const unsubscribeGenres = genresRepository.subscribeGenres(
-      user.uid,
-      setGenreOptions
-    );
-
-    const unsubscribeSubGenres = genresRepository.subscribeSubGenres(
-      user.uid,
-      setSubGenreOptions
-    );
-
-    const unsubscribeBillings = billingsRepository.subscribe(
-      user.uid,
-      setBillingOptions
-    );
-
-    const unsubscribeTags = tagsRepository.subscribe(user.uid, setTagOptions);
-
-    return () => {
-      unsubscribeVenues();
-      unsubscribeGenres();
-      unsubscribeSubGenres();
-      unsubscribeBillings();
-      unsubscribeTags();
-    };
-}, [user, clearData, refreshPerformances]);
+    refreshCatalog().catch((error) => {
+      console.error('Failed to load catalog from backend:', error);
+    });
+  }, [user, clearData, refreshPerformances, refreshCatalog]);
 
   return {
     performances,
