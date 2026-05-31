@@ -75,3 +75,99 @@ export async function createPerformancesBatchFromApi(payloads: Array<Omit<Perfor
 
   return res.json();
 }
+
+export async function updatePerformanceFromApi(performanceId: string, payload: PerformancePayload): Promise<void> {
+  const token = await auth.currentUser?.getIdToken();
+
+  if (!token) {
+    throw new Error('User is not authenticated.');
+  }
+
+  const performance = {
+    ...payload,
+    showId: buildShowId(payload.showName, payload.date),
+  };
+
+  const res = await fetch(`${API_URL}/api/performances/${performanceId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(performance),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to update performance: ${res.status}`);
+  }
+}
+
+export async function deletePerformanceFromApi(performanceId: string): Promise<void> {
+  const token = await auth.currentUser?.getIdToken();
+
+  if (!token) {
+    throw new Error('User is not authenticated.');
+  }
+
+  const res = await fetch(`${API_URL}/api/performances/${performanceId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to delete performance: ${res.status}`);
+  }
+}
+
+export async function updatePerformancesBatchFromApi(
+    updates: Array<{
+      id: string;
+      performance: Omit<Performance, 'id'>;
+    }>
+  ): Promise<Performance[]> {
+  const token = await auth.currentUser?.getIdToken();
+
+  if (!token) {
+    throw new Error('User is not authenticated.');
+  }
+
+  const res = await fetch(`${API_URL}/api/performances/batch`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(updates),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to update performances batch: ${res.status}`);
+  }
+
+  return res.json();
+}
+
+export async function deletePerformancesBatchFromApi(
+    performanceIds: string[]
+  ): Promise<void> {
+  const token = await auth.currentUser?.getIdToken();
+
+  if (!token) {
+    throw new Error('User is not authenticated.');
+  }
+
+  const res = await fetch(`${API_URL}/api/performances/batch`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(performanceIds),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to delete performances batch: ${res.status}`);
+  }
+}

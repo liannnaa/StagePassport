@@ -1,5 +1,6 @@
 import React, {
   createContext,
+  useCallback,
   useContext,
   useMemo,
 } from 'react';
@@ -36,6 +37,11 @@ export function PerformancesProvider({
     refresh,
     addPerformanceToState,
     addPerformancesToState,
+    updatePerformanceInState,
+    deletePerformanceFromState,
+    updatePerformancesInState,
+    deletePerformancesFromState,
+    updateArtistGenreInState,
   } = usePerformancesData(user);
 
   const {
@@ -89,7 +95,7 @@ export function PerformancesProvider({
     deleteTagOption,
     isTagOptionInUse,
 
-    syncGenresForArtist,
+    syncGenresForArtist: syncGenresForArtistBase,
 
     getCatalogUsage,
     removeCatalogValueFromPerformance,
@@ -103,6 +109,14 @@ export function PerformancesProvider({
     billingOptions,
     tagOptions,
   });
+
+  const syncGenresForArtist = useCallback(
+    async (artistName: string, genre: string, subGenre: string) => {
+      await syncGenresForArtistBase(artistName, genre, subGenre);
+      updateArtistGenreInState(artistName, genre, subGenre);
+    },
+    [syncGenresForArtistBase, updateArtistGenreInState]
+  );
 
   const {
     addPerformance,
@@ -126,6 +140,10 @@ export function PerformancesProvider({
     getArtistGenreDefault,
     addPerformanceToState,
     addPerformancesToState,
+    updatePerformanceInState,
+    deletePerformanceFromState,
+    updatePerformancesInState,
+    deletePerformancesFromState,
   });
 
   const value = useMemo<PerformancesContextValue>(

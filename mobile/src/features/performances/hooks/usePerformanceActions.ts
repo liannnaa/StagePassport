@@ -8,8 +8,6 @@ import {
   PerformancePayload,
 } from '../types/performanceContextTypes';
 
-import { performancesRepository } from '../repository/performancesRepository';
-
 import { buildShowId } from '../utils/showId';
 
 import {
@@ -20,7 +18,14 @@ import {
 } from '../services/performancePayloadService';
 
 import { syncCatalogOptions as syncCatalogOptionsService } from '../services/catalogSyncService';
-import { createPerformanceFromApi, createPerformancesBatchFromApi } from '../../../api/stagePassportApi';
+import {
+  createPerformanceFromApi,
+  createPerformancesBatchFromApi,
+  updatePerformanceFromApi,
+  deletePerformanceFromApi,
+  updatePerformancesBatchFromApi,
+  deletePerformancesBatchFromApi,
+} from '../../../api/stagePassportApi';
 
 type AuthUser = {
   uid: string;
@@ -32,6 +37,10 @@ type UsePerformanceActionsParams = {
   getArtistGenreDefault: (artistName: string) => ArtistGenreDefault | undefined;
   addPerformanceToState: (performance: Performance) => void;
   addPerformancesToState: (performances: Performance[]) => void;
+  updatePerformanceInState: (performanceId: string, updatedPerformance: Performance) => void;
+  deletePerformanceFromState: (performanceId: string) => void;
+  updatePerformancesInState: (performances: Performance[]) => void;
+  deletePerformancesFromState: (performanceIds: string[]) => void;
 };
 
 function buildPerformanceKey(row: {
@@ -96,6 +105,10 @@ export function usePerformanceActions({
   getArtistGenreDefault,
   addPerformanceToState,
   addPerformancesToState,
+  updatePerformanceInState,
+  deletePerformanceFromState,
+  updatePerformancesInState,
+  deletePerformancesFromState,
 }: UsePerformanceActionsParams) {
   const isSavingConcertRef = useRef(false);
   const isSavingArtistRef = useRef(false);
@@ -133,12 +146,12 @@ export function usePerformanceActions({
       }
 
       const updatedPerformance = toPerformanceWithShowId(payload);
+      await updatePerformanceFromApi(performanceId, payload);
 
-      await performancesRepository.update(
-        user.uid,
-        performanceId,
-        updatedPerformance
-      );
+      updatePerformanceInState(performanceId, {
+        id: performanceId,
+        ...updatedPerformance,
+      });
 
       await syncCatalogOptionsService(user.uid, [
         {
@@ -151,7 +164,7 @@ export function usePerformanceActions({
         },
       ]);
     },
-    [user]
+    [user, updatePerformanceInState]
   );
 
   const deletePerformance = useCallback(
@@ -160,9 +173,10 @@ export function usePerformanceActions({
         throw new Error('You must be logged in to delete a performance.');
       }
 
-      await performancesRepository.delete(user.uid, performanceId);
+      await deletePerformanceFromApi(performanceId);
+      deletePerformanceFromState(performanceId);
     },
-    [user]
+    [user, deletePerformanceFromState]
   );
 
   const deleteConcertPerformances = useCallback(
@@ -179,10 +193,9 @@ export function usePerformanceActions({
         throw new Error('Concert not found.');
       }
 
-      await performancesRepository.deleteMany(
-        user.uid,
-        rowsToDelete.map((row) => row.id)
-      );
+      const idsToDelete = rowsToDelete.map((row) => row.id);
+      await deletePerformancesBatchFromApi(idsToDelete);
+      deletePerformancesFromState(idsToDelete);
     },
     [performances, user]
   );
@@ -204,10 +217,9 @@ export function usePerformanceActions({
         throw new Error('Artist not found.');
       }
 
-      await performancesRepository.deleteMany(
-        user.uid,
-        rowsToDelete.map((row) => row.id)
-      );
+      const idsToDelete = rowsToDelete.map((row) => row.id);
+      await deletePerformancesBatchFromApi(idsToDelete);
+      deletePerformancesFromState(idsToDelete);
     },
     [performances, user]
   );
@@ -445,14 +457,19 @@ export function usePerformanceActions({
       isSavingConcertRef.current = true;
 
       try {
-        await Promise.all([
-          performancesRepository.deleteMany(
-            user.uid,
-            rowsToDelete.map((row) => row.id)
-          ),
-          performancesRepository.updateMany(user.uid, updatePayloads),
-          performancesRepository.insertMany(user.uid, insertPayloads),
+        const idsToDelete = rowsToDelete.map((row) => row.id);
+        const [updatedPerformances, createdPerformances] = await Promise.all([
+          updatePerformancesBatchFromApi(updatePayloads),
+          createPerformancesBatchFromApi(insertPayloads),
         ]);
+
+        if (idsToDelete.length > 0) {
+          await deletePerformancesBatchFromApi(idsToDelete);
+        }
+
+        deletePerformancesFromState(idsToDelete);
+        updatePerformancesInState(updatedPerformances);
+        addPerformancesToState(createdPerformances);
 
         await syncCatalogOptionsService(user.uid, [
           ...updatePayloads.map((item) => ({
@@ -635,14 +652,19 @@ export function usePerformanceActions({
       isSavingArtistRef.current = true;
 
       try {
-        await Promise.all([
-          performancesRepository.deleteMany(
-            user.uid,
-            rowsToDelete.map((row) => row.id)
-          ),
-          performancesRepository.updateMany(user.uid, updatePayloads),
-          performancesRepository.insertMany(user.uid, insertPayloads),
+        const idsToDelete = rowsToDelete.map((row) => row.id);
+        const [updatedPerformances, createdPerformances] = await Promise.all([
+          updatePerformancesBatchFromApi(updatePayloads),
+          createPerformancesBatchFromApi(insertPayloads),
         ]);
+
+        if (idsToDelete.length > 0) {
+          await deletePerformancesBatchFromApi(idsToDelete);
+        }
+
+        deletePerformancesFromState(idsToDelete);
+        updatePerformancesInState(updatedPerformances);
+        addPerformancesToState(createdPerformances);
 
         await syncCatalogOptionsService(user.uid, [
           ...updatePayloads.map((item) => ({

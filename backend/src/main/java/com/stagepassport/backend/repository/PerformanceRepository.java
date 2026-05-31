@@ -4,9 +4,10 @@ import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import com.google.firebase.cloud.FirestoreClient;
 import com.stagepassport.backend.dto.PerformanceResponse;
+import com.stagepassport.backend.dto.PerformanceUpdateRequest;
+
 import org.springframework.stereotype.Repository;
 import com.stagepassport.backend.dto.PerformanceRequest;
-import com.google.cloud.firestore.WriteBatch;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -185,5 +186,122 @@ public class PerformanceRepository {
         batch.commit().get();
 
         return createdPerformances;
+    }
+
+    public void update(String uid, String performanceId, PerformanceRequest request) throws Exception {
+        Firestore db = FirestoreClient.getFirestore();
+
+        DocumentReference ref = db
+                .collection("users")
+                .document(uid)
+                .collection("performances")
+                .document(performanceId);
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("artist", request.artist());
+        data.put("venue", request.venue());
+        data.put("city", request.city());
+        data.put("date", request.date());
+        data.put("billing", request.billing());
+        data.put("tags", request.tags() == null ? List.of() : request.tags());
+        data.put("genre", request.genre());
+        data.put("subGenre", request.subGenre());
+        data.put("showName", request.showName());
+        data.put("showId", request.showId());
+        data.put("artistNormalized", normalizeText(request.artist()));
+        data.put("dateSortKey", toDateSortKey(request.date()));
+        data.put("updatedAt", FieldValue.serverTimestamp());
+
+        ref.update(data).get();
+    }
+
+    public void delete(String uid, String performanceId) throws Exception {
+        Firestore db = FirestoreClient.getFirestore();
+
+        db.collection("users")
+                .document(uid)
+                .collection("performances")
+                .document(performanceId)
+                .delete()
+                .get();
+    }
+
+    public List<PerformanceResponse> updateMany(String uid, List<PerformanceUpdateRequest> updates) throws Exception {
+        if (updates == null || updates.isEmpty()) {
+            return List.of();
+        }
+
+        Firestore db = FirestoreClient.getFirestore();
+
+        CollectionReference performancesRef = db
+                .collection("users")
+                .document(uid)
+                .collection("performances");
+
+        WriteBatch batch = db.batch();
+
+        List<PerformanceResponse> updatedPerformances = new ArrayList<>();
+
+        for (PerformanceUpdateRequest update : updates) {
+            PerformanceRequest request = update.performance();
+
+            DocumentReference ref = performancesRef.document(update.id());
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("artist", request.artist());
+            data.put("venue", request.venue());
+            data.put("city", request.city());
+            data.put("date", request.date());
+            data.put("billing", request.billing());
+            data.put("tags", request.tags() == null ? List.of() : request.tags());
+            data.put("genre", request.genre());
+            data.put("subGenre", request.subGenre());
+            data.put("showName", request.showName());
+            data.put("showId", request.showId());
+            data.put("artistNormalized", normalizeText(request.artist()));
+            data.put("dateSortKey", toDateSortKey(request.date()));
+            data.put("updatedAt", FieldValue.serverTimestamp());
+
+            batch.update(ref, data);
+
+            updatedPerformances.add(new PerformanceResponse(
+                    update.id(),
+                    request.artist(),
+                    request.billing(),
+                    request.city(),
+                    request.date(),
+                    request.genre(),
+                    request.showId(),
+                    request.showName(),
+                    request.subGenre(),
+                    request.tags() == null ? List.of() : request.tags(),
+                    request.venue()
+            ));
+        }
+
+        batch.commit().get();
+
+        return updatedPerformances;
+    }
+
+    public void deleteMany(String uid, List<String> performanceIds) throws Exception {
+        if (performanceIds == null || performanceIds.isEmpty()) {
+            return;
+        }
+
+        Firestore db = FirestoreClient.getFirestore();
+
+        CollectionReference performancesRef = db
+                .collection("users")
+                .document(uid)
+                .collection("performances");
+
+        WriteBatch batch = db.batch();
+
+        for (String performanceId : performanceIds) {
+            batch.delete(performancesRef.document(performanceId));
+        }
+
+        batch.commit().get();
     }
 }
