@@ -1,5 +1,7 @@
 package com.stagepassport.backend.controller;
 
+import com.stagepassport.backend.dto.performance.ArtistGenreSyncRequest;
+import com.stagepassport.backend.dto.performance.ArtistGenreSyncResponse;
 import com.stagepassport.backend.dto.performance.PerformanceRequest;
 import com.stagepassport.backend.dto.performance.PerformanceResponse;
 import com.stagepassport.backend.dto.performance.PerformanceUpdateRequest;
@@ -67,5 +69,19 @@ public class PerformanceController {
     public void deletePerformancesBatch(Authentication authentication, @RequestBody List<String> performanceIds) throws Exception {
         FirebaseAuthenticationToken firebaseAuth = (FirebaseAuthenticationToken) authentication;
         performanceService.deletePerformancesForUser(firebaseAuth.getUid(), performanceIds);
+    }
+
+    @PutMapping("/api/performances/artist/genres")
+    public ArtistGenreSyncResponse syncArtistGenres(
+            Authentication authentication,
+            @RequestBody ArtistGenreSyncRequest request
+    ) throws Exception {
+        FirebaseAuthenticationToken firebaseAuth =
+                (FirebaseAuthenticationToken) authentication;
+
+        return performanceService.syncGenresByArtist(
+                firebaseAuth.getUid(),
+                request
+        );
     }
 }

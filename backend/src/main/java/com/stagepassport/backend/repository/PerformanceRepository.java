@@ -336,4 +336,71 @@ public class PerformanceRepository {
 
         return results;
     }
+
+    public List<PerformanceResponse> updateGenresByArtist(
+            String uid,
+            String artistName,
+            String genre,
+            String subGenre
+    ) throws Exception {
+        String normalizedArtistName = normalizeText(artistName);
+
+        if (normalizedArtistName.isBlank()) {
+            return List.of();
+        }
+
+        Firestore db = FirestoreClient.getFirestore();
+
+        CollectionReference performancesRef = db
+                .collection("users")
+                .document(uid)
+                .collection("performances");
+
+        QuerySnapshot snapshot = performancesRef
+                .whereEqualTo("artistNormalized", normalizedArtistName)
+                .get()
+                .get();
+
+        if (snapshot.isEmpty()) {
+            return List.of();
+        }
+
+        WriteBatch batch = db.batch();
+        List<PerformanceResponse> updatedPerformances = new ArrayList<>();
+
+        for (QueryDocumentSnapshot doc : snapshot.getDocuments()) {
+            String currentGenre = doc.getString("genre") == null ? "" : doc.getString("genre");
+            String currentSubGenre = doc.getString("subGenre") == null ? "" : doc.getString("subGenre");
+
+            if (currentGenre.equals(genre) && currentSubGenre.equals(subGenre)) {
+                continue;
+            }
+
+            batch.update(doc.getReference(), Map.of(
+                    "genre", genre,
+                    "subGenre", subGenre,
+                    "updatedAt", FieldValue.serverTimestamp()
+            ));
+
+            updatedPerformances.add(new PerformanceResponse(
+                    doc.getId(),
+                    doc.getString("artist"),
+                    doc.getString("billing"),
+                    doc.getString("city"),
+                    doc.getString("date"),
+                    genre,
+                    doc.getString("showId"),
+                    doc.getString("showName"),
+                    subGenre,
+                    getStringList(doc, "tags"),
+                    doc.getString("venue")
+            ));
+        }
+
+        if (!updatedPerformances.isEmpty()) {
+            batch.commit().get();
+        }
+
+        return updatedPerformances;
+    }
 }

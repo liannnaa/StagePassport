@@ -343,3 +343,37 @@ export async function replaceCatalogValueFromApi(type: CatalogType, oldId: strin
 
   return res.json();
 }
+
+export async function syncArtistGenresFromApi(
+  artistName: string,
+  genre: string,
+  subGenre: string
+): Promise<{
+  performances: Performance[];
+  catalog: CatalogResponse;
+}> {
+  const token = await auth.currentUser?.getIdToken();
+
+  if (!token) {
+    throw new Error('User is not authenticated.');
+  }
+
+  const res = await fetch(`${API_URL}/api/performances/artist/genres`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      artistName,
+      genre,
+      subGenre,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to sync artist genres: ${res.status}`);
+  }
+
+  return res.json();
+}

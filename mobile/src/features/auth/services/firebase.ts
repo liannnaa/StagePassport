@@ -1,7 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import * as firebaseAuth from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getFirestore } from 'firebase/firestore';
 import Constants from 'expo-constants';
 
 const {
@@ -31,5 +30,3 @@ const getReactNativePersistence = (firebaseAuth as any).getReactNativePersistenc
 export const auth = getReactNativePersistence
   ? firebaseAuth.initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage), })
   : firebaseAuth.getAuth(app);
-
-export const db = getFirestore(app);

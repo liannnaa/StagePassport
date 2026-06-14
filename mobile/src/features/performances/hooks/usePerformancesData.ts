@@ -3,16 +3,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { Performance } from '../types/performance';
 
 import { VenueOption } from '../../venues/types/venue';
-import { venueOptionsRepository } from '../../venues/repository/venueOptionsRepository';
 
 import { GenreOption, SubGenreOption } from '../../genres/types/genre';
-import { genresRepository } from '../../genres/repository/genresRepository';
 
 import { BillingOption } from '../../billings/types/billing';
-import { billingsRepository } from '../../billings/repository/billingsRepository';
 
 import { TagOption } from '../../tags/types/tag';
-import { tagsRepository } from '../../tags/repository/tagsRepository';
 import { getPerformancesFromApi, getCatalogFromApi } from '../../../api/stagePassportApi';
 
 type AuthUser = {
@@ -153,56 +149,6 @@ export function usePerformancesData(user: AuthUser) {
 
     const items = await getPerformancesFromApi();
     setPerformances(items);
-  }, [user]);
-
-  const refreshVenueOptions = useCallback(async () => {
-    if (!user) {
-      setVenueOptions([]);
-      return;
-    }
-
-    const items = await venueOptionsRepository.getAll(user.uid);
-    setVenueOptions(items);
-  }, [user]);
-
-  const refreshGenres = useCallback(async () => {
-    if (!user) {
-      setGenreOptions([]);
-      return;
-    }
-
-    const items = await genresRepository.getAllGenres(user.uid);
-    setGenreOptions(items);
-  }, [user]);
-
-  const refreshSubGenres = useCallback(async () => {
-    if (!user) {
-      setSubGenreOptions([]);
-      return;
-    }
-
-    const items = await genresRepository.getAllSubGenres(user.uid);
-    setSubGenreOptions(items);
-  }, [user]);
-
-  const refreshBillings = useCallback(async () => {
-    if (!user) {
-      setBillingOptions([]);
-      return;
-    }
-
-    const items = await billingsRepository.getAll(user.uid);
-    setBillingOptions(items);
-  }, [user]);
-
-  const refreshTags = useCallback(async () => {
-    if (!user) {
-      setTagOptions([]);
-      return;
-    }
-
-    const items = await tagsRepository.getAll(user.uid);
-    setTagOptions(items);
   }, [user]);
 
   const refresh = useCallback(async () => {

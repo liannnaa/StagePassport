@@ -1,8 +1,13 @@
 package com.stagepassport.backend.service;
 
+import com.stagepassport.backend.dto.catalog.CatalogResponse;
+import com.stagepassport.backend.dto.catalog.CatalogSyncRowRequest;
+import com.stagepassport.backend.dto.performance.ArtistGenreSyncRequest;
+import com.stagepassport.backend.dto.performance.ArtistGenreSyncResponse;
 import com.stagepassport.backend.dto.performance.PerformanceRequest;
 import com.stagepassport.backend.dto.performance.PerformanceResponse;
 import com.stagepassport.backend.dto.performance.PerformanceUpdateRequest;
+import com.stagepassport.backend.repository.CatalogRepository;
 import com.stagepassport.backend.repository.PerformanceRepository;
 import org.springframework.stereotype.Service;
 
@@ -12,9 +17,14 @@ import java.util.List;
 public class PerformanceService {
 
     private final PerformanceRepository performanceRepository;
+    private final CatalogRepository catalogRepository;
 
-    public PerformanceService(PerformanceRepository performanceRepository) {
+    public PerformanceService(
+            PerformanceRepository performanceRepository,
+            CatalogRepository catalogRepository
+    ) {
         this.performanceRepository = performanceRepository;
+        this.catalogRepository = catalogRepository;
     }
 
     public List<PerformanceResponse> getPerformancesForUser(String uid) throws Exception {
@@ -43,5 +53,35 @@ public class PerformanceService {
 
     public void deletePerformancesForUser(String uid, List<String> performanceIds) throws Exception {
         performanceRepository.deleteMany(uid, performanceIds);
+    }
+
+    public ArtistGenreSyncResponse syncGenresByArtist(
+            String uid,
+            ArtistGenreSyncRequest request
+    ) throws Exception {
+        String genre = request.genre() == null ? "" : request.genre().trim();
+        String subGenre = request.subGenre() == null ? "" : request.subGenre().trim();
+
+        List<PerformanceResponse> updatedPerformances =
+                performanceRepository.updateGenresByArtist(
+                        uid,
+                        request.artistName(),
+                        genre,
+                        subGenre
+                );
+
+        CatalogResponse catalog = catalogRepository.syncCatalog(
+                uid,
+                List.of(new CatalogSyncRowRequest(
+                        "",
+                        "",
+                        genre,
+                        subGenre,
+                        "",
+                        List.of()
+                ))
+        );
+
+        return new ArtistGenreSyncResponse(updatedPerformances, catalog);
     }
 }

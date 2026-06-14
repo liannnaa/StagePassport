@@ -7,8 +7,6 @@ import {
   CatalogUsageExtra,
 } from '../types/performanceContextTypes';
 
-import { performancesRepository } from '../repository/performancesRepository';
-
 import {
   buildCatalogUsageCounts,
   getCatalogUsage as getCatalogUsageFromService,
@@ -39,7 +37,8 @@ import {
   deleteGenreFromApi,
   deleteSubGenreFromApi,
   replaceCatalogValueFromApi,
-  updatePerformanceFromApi
+  updatePerformanceFromApi,
+  syncArtistGenresFromApi
 } from '../../../api/stagePassportApi';
 
 type AuthUser = {
@@ -286,26 +285,16 @@ export function useCatalogActions({
     async (artistName: string, genre: string, subGenre: string) => {
       if (!user || !artistName.trim()) return;
 
-      await performancesRepository.updateGenresByArtist(
-        user.uid,
+      const result = await syncArtistGenresFromApi(
         artistName.trim(),
         genre.trim(),
         subGenre.trim()
       );
 
-      const catalog = await syncCatalogOptionsService(user.uid, [
-        {
-          venue: '',
-          city: '',
-          genre: genre.trim(),
-          subGenre: subGenre.trim(),
-          billing: '',
-          tags: [],
-        },
-      ]);
-      setCatalogState(catalog);
+      updatePerformancesInState(result.performances);
+      setCatalogState(result.catalog);
     },
-    [user]
+    [user, updatePerformancesInState, setCatalogState]
   );
 
   const getCatalogUsage = useCallback(
