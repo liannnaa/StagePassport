@@ -110,6 +110,8 @@ export function PerformancesProvider({
     billingOptions,
     tagOptions,
     setCatalogState,
+    updatePerformancesInState,
+    updatePerformanceInState,
   });
 
   const syncGenresForArtist = useCallback(

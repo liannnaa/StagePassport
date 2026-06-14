@@ -17,17 +17,13 @@ import {
 import { syncCatalogOptions as syncCatalogOptionsService } from '../services/catalogSyncService';
 
 import { VenueOption } from '../../venues/types/venue';
-import { venueOptionsRepository } from '../../venues/repository/venueOptionsRepository';
 import { buildVenueKey } from '../../venues/utils/venueMatching';
 
 import { GenreOption, SubGenreOption } from '../../genres/types/genre';
-import { genresRepository } from '../../genres/repository/genresRepository';
 
 import { BillingOption } from '../../billings/types/billing';
-import { billingsRepository } from '../../billings/repository/billingsRepository';
 
 import { TagOption } from '../../tags/types/tag';
-import { tagsRepository } from '../../tags/repository/tagsRepository';
 import { buildTagKey } from '../../tags/utils/tagKeys';
 
 import {
@@ -37,6 +33,13 @@ import {
   createGenreFromApi,
   createSubGenreFromApi,
   getCatalogFromApi,
+  deleteBillingFromApi,
+  deleteTagFromApi,
+  deleteVenueFromApi,
+  deleteGenreFromApi,
+  deleteSubGenreFromApi,
+  replaceCatalogValueFromApi,
+  updatePerformanceFromApi
 } from '../../../api/stagePassportApi';
 
 type AuthUser = {
@@ -58,6 +61,11 @@ type UseCatalogActionsParams = {
     billings: BillingOption[];
     tags: TagOption[];
   }) => void;
+  updatePerformancesInState: (performances: Performance[]) => void;
+  updatePerformanceInState: (
+    performanceId: string,
+    updatedPerformance: Performance
+  ) => void;
 };
 
 export function useCatalogActions({
@@ -69,6 +77,8 @@ export function useCatalogActions({
   billingOptions,
   tagOptions,
   setCatalogState,
+  updatePerformancesInState,
+  updatePerformanceInState
 }: UseCatalogActionsParams) {
   const catalogUsageCounts = useMemo(
     () => buildCatalogUsageCounts(performances),
@@ -95,9 +105,10 @@ export function useCatalogActions({
   const deleteVenueOption = useCallback(
     async (id: string) => {
       if (!user) throw new Error('You must be logged in to delete a venue.');
-      await venueOptionsRepository.deleteVenueOption(user.uid, id);
+      await deleteVenueFromApi(id);
+      await refreshCatalogState();
     },
-    [user]
+    [user, refreshCatalogState]
   );
 
   const isVenueOptionInUse = useCallback(
@@ -126,9 +137,10 @@ export function useCatalogActions({
   const deleteGenreOption = useCallback(
     async (id: string) => {
       if (!user) throw new Error('You must be logged in to delete a genre.');
-      await genresRepository.deleteGenre(user.uid, id);
+      await deleteGenreFromApi(id);
+      await refreshCatalogState();
     },
-    [user]
+    [user, refreshCatalogState]
   );
 
   const isGenreOptionInUse = useCallback(
@@ -164,9 +176,10 @@ export function useCatalogActions({
   const deleteSubGenreOption = useCallback(
     async (id: string) => {
       if (!user) throw new Error('You must be logged in to delete a sub-genre.');
-      await genresRepository.deleteSubGenre(user.uid, id);
+      await deleteSubGenreFromApi(id);
+      await refreshCatalogState();
     },
-    [user]
+    [user, refreshCatalogState]
   );
 
   const isSubGenreOptionInUse = useCallback(
@@ -206,9 +219,11 @@ export function useCatalogActions({
   const deleteBillingOption = useCallback(
     async (id: string) => {
       if (!user) throw new Error('You must be logged in to delete a billing.');
-      await billingsRepository.delete(user.uid, id);
+
+      await deleteBillingFromApi(id);
+      await refreshCatalogState();
     },
-    [user]
+    [user, refreshCatalogState]
   );
 
   const isBillingOptionInUse = useCallback(
@@ -236,9 +251,10 @@ export function useCatalogActions({
   const deleteTagOption = useCallback(
     async (id: string) => {
       if (!user) throw new Error('You must be logged in to delete a tag.');
-      await tagsRepository.delete(user.uid, id);
+      await deleteTagFromApi(id);
+      await refreshCatalogState();
     },
-    [user]
+    [user, refreshCatalogState]
   );
 
   function normalizeCatalogValue(value: string) {
@@ -350,7 +366,7 @@ export function useCatalogActions({
           type === 'genre' || type === 'subGenre' ? '' : performance.subGenre,
       };
 
-      await performancesRepository.update(user.uid, performanceId, {
+      await updatePerformanceFromApi(performanceId, {
         artist: nextPerformance.artist,
         venue: nextPerformance.venue,
         city: nextPerformance.city,
@@ -360,10 +376,11 @@ export function useCatalogActions({
         genre: nextPerformance.genre,
         subGenre: nextPerformance.subGenre,
         showName: nextPerformance.showName,
-        showId: nextPerformance.showId,
       });
+
+      updatePerformanceInState(performanceId, nextPerformance);
     },
-    [performances, tagOptions, user]
+    [performances, tagOptions, user, updatePerformanceInState]
   );
 
   const replaceCatalogValue = useCallback(
@@ -376,102 +393,12 @@ export function useCatalogActions({
         throw new Error('You must be logged in to update catalog usage.');
       }
 
-      const usage = getCatalogUsage(type, oldId, {
-        genreId: replacement.genreId,
-      });
+      const result = await replaceCatalogValueFromApi(type, oldId, replacement);
 
-      const tagToReplace =
-        type === 'tag'
-          ? tagOptions.find((tag) => tag.id === oldId)
-          : undefined;
-
-      for (const performance of usage) {
-        const nextPerformance = {
-          ...performance,
-
-          billing:
-            type === 'billing'
-              ? replacement.billing ?? ''
-              : performance.billing,
-
-          tags:
-            type === 'tag' && tagToReplace
-              ? performance.tags.map((tag) =>
-                  buildTagKey(tag) === tagToReplace.normalizedName
-                    ? replacement.tag ?? tag
-                    : tag
-                )
-              : performance.tags,
-
-          venue:
-            type === 'venue'
-              ? replacement.venue ?? ''
-              : performance.venue,
-
-          city:
-            type === 'venue'
-              ? replacement.city ?? ''
-              : performance.city,
-
-          genre:
-            type === 'genre'
-              ? replacement.genre ?? ''
-              : performance.genre,
-
-          subGenre:
-            type === 'genre'
-              ? ''
-              : type === 'subGenre'
-              ? replacement.subGenre ?? ''
-              : performance.subGenre,
-        };
-
-        await performancesRepository.update(user.uid, performance.id, {
-          artist: nextPerformance.artist,
-          venue: nextPerformance.venue,
-          city: nextPerformance.city,
-          date: nextPerformance.date,
-          billing: nextPerformance.billing,
-          tags: nextPerformance.tags,
-          genre: nextPerformance.genre,
-          subGenre: nextPerformance.subGenre,
-          showName: nextPerformance.showName,
-          showId: nextPerformance.showId,
-        });
-      }
-
-      const catalog = await syncCatalogOptionsService(
-        user.uid,
-        usage.map((performance) => ({
-          venue:
-            type === 'venue'
-              ? replacement.venue ?? ''
-              : performance.venue,
-          city:
-            type === 'venue'
-              ? replacement.city ?? ''
-              : performance.city,
-          genre:
-            type === 'genre'
-              ? replacement.genre ?? ''
-              : performance.genre,
-          subGenre:
-            type === 'subGenre'
-              ? replacement.subGenre ?? ''
-              : performance.subGenre,
-          billing:
-            type === 'billing'
-              ? replacement.billing ?? ''
-              : performance.billing,
-          tags:
-            type === 'tag'
-              ? [replacement.tag ?? ''].filter(Boolean)
-              : performance.tags,
-        }))
-      );
-      setCatalogState(catalog);
+      updatePerformancesInState(result.performances);
+      setCatalogState(result.catalog);
     },
-    [getCatalogUsage, tagOptions, user]
+    [user, updatePerformancesInState, setCatalogState]
   );
 
   return {

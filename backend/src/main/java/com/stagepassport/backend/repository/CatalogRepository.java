@@ -312,4 +312,59 @@ public class CatalogRepository {
         private boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
     }
+
+    public void deleteBilling(String uid, String id) throws Exception {
+        deleteCatalogDoc(uid, "billings", id);
+    }
+
+	public void deleteTag(String uid, String id) throws Exception {
+		deleteCatalogDoc(uid, "tags", id);
+	}
+
+	public void deleteVenue(String uid, String id) throws Exception {
+		deleteCatalogDoc(uid, "venues", id);
+	}
+
+	public void deleteSubGenre(String uid, String id) throws Exception {
+		deleteCatalogDoc(uid, "subGenres", id);
+	}
+
+	private void deleteCatalogDoc(String uid, String collectionName, String id) throws Exception {
+		Firestore db = FirestoreClient.getFirestore();
+
+		db.collection("users")
+			.document(uid)
+			.collection(collectionName)
+			.document(id)
+			.delete()
+			.get();
+	}
+
+	public void deleteGenre(String uid, String genreId) throws Exception {
+		Firestore db = FirestoreClient.getFirestore();
+
+		CollectionReference subGenresRef = db.collection("users")
+				.document(uid)
+				.collection("subGenres");
+
+		QuerySnapshot subGenres = subGenresRef
+				.whereEqualTo("genreId", genreId)
+				.get()
+				.get();
+
+		WriteBatch batch = db.batch();
+
+		for (QueryDocumentSnapshot doc : subGenres.getDocuments()) {
+			batch.delete(doc.getReference());
+		}
+
+		batch.delete(
+				db.collection("users")
+						.document(uid)
+						.collection("genres")
+						.document(genreId)
+		);
+
+		batch.commit().get();
+	}
 }

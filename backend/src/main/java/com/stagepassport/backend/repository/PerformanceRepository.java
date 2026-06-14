@@ -52,7 +52,7 @@ public class PerformanceRepository {
         return performances;
     }
 
-    private List<String> getStringList(QueryDocumentSnapshot doc, String fieldName) {
+    private List<String> getStringList(DocumentSnapshot doc, String fieldName) {
         Object value = doc.get(fieldName);
 
         if (!(value instanceof List<?> rawList)) {
@@ -303,5 +303,37 @@ public class PerformanceRepository {
         }
 
         batch.commit().get();
+    }
+
+    public List<PerformanceResponse> findByIds(String uid, List<String> ids) throws Exception {
+        Firestore db = FirestoreClient.getFirestore();
+        List<PerformanceResponse> results = new ArrayList<>();
+
+        for (String id : ids) {
+            DocumentSnapshot doc = db.collection("users")
+                    .document(uid)
+                    .collection("performances")
+                    .document(id)
+                    .get()
+                    .get();
+
+            if (!doc.exists()) continue;
+
+            results.add(new PerformanceResponse(
+                    doc.getId(),
+                    doc.getString("artist"),
+                    doc.getString("billing"),
+                    doc.getString("city"),
+                    doc.getString("date"),
+                    doc.getString("genre"),
+                    doc.getString("showId"),
+                    doc.getString("showName"),
+                    doc.getString("subGenre"),
+                    getStringList(doc, "tags"),
+                    doc.getString("venue")
+            ));
+        }
+
+        return results;
     }
 }
