@@ -2,6 +2,8 @@ package com.stagepassport.backend.controller;
 
 import com.stagepassport.backend.dto.performance.ArtistGenreSyncRequest;
 import com.stagepassport.backend.dto.performance.ArtistGenreSyncResponse;
+import com.stagepassport.backend.dto.performance.FullPerformanceBatchRequest;
+import com.stagepassport.backend.dto.performance.FullPerformanceBatchResponse;
 import com.stagepassport.backend.dto.performance.PerformanceRequest;
 import com.stagepassport.backend.dto.performance.PerformanceResponse;
 import com.stagepassport.backend.dto.performance.PerformanceUpdateRequest;
@@ -80,6 +82,20 @@ public class PerformanceController {
                 (FirebaseAuthenticationToken) authentication;
 
         return performanceService.syncGenresByArtist(
+                firebaseAuth.getUid(),
+                request
+        );
+    }
+
+    @PostMapping("/api/performances/batch/full")
+    public FullPerformanceBatchResponse createBatchFull(
+            Authentication authentication,
+            @RequestBody FullPerformanceBatchRequest request
+    ) throws Exception {
+        FirebaseAuthenticationToken firebaseAuth =
+                (FirebaseAuthenticationToken) authentication;
+
+        return performanceService.createBatchFull(
                 firebaseAuth.getUid(),
                 request
         );

@@ -25,6 +25,7 @@ import {
   deletePerformanceFromApi,
   updatePerformancesBatchFromApi,
   deletePerformancesBatchFromApi,
+  createPerformancesBatchFullFromApi,
 } from '../../../api/stagePassportApi';
 import { TagOption } from '../../tags/types/tag';
 import { BillingOption } from '../../billings/types/billing';
@@ -356,21 +357,14 @@ export function usePerformanceActions({
       isSavingConcertRef.current = true;
 
       try {
-        const createdPerformances = await createPerformancesBatchFromApi(performanceRows);
-        addPerformancesToState(createdPerformances);
-
-        const catalog = await syncCatalogOptionsService(
-          user.uid,
-          performanceRows.map((row) => ({
-            venue: row.venue,
-            city: row.city,
-            genre: row.genre,
-            subGenre: row.subGenre,
-            billing: row.billing,
-            tags: row.tags,
-          }))
+        const result = await createPerformancesBatchFullFromApi(
+          performanceRows,
+          true
         );
-        setCatalogState(catalog);
+
+        addPerformancesToState(result.createdPerformances);
+        updatePerformancesInState(result.updatedPerformances);
+        setCatalogState(result.catalog);
       } finally {
         isSavingConcertRef.current = false;
       }
