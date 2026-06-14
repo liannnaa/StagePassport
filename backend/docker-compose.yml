@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: stagepassport-postgres
+    environment:
+      POSTGRES_DB: stagepassport
+      POSTGRES_USER: stagepassport
+      POSTGRES_PASSWORD: stagepassport
+    ports:
+      - "5432:5432"
+    volumes:
+      - stagepassport-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  stagepassport-postgres-data:
