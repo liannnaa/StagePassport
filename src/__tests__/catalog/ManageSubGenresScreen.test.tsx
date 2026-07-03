@@ -147,6 +147,11 @@ jest.mock('../../features/performances/context/PerformancesContext', () => ({
 }));
 
 describe('ManageSubGenresScreen', () => {
+  function confirmRemoveAlert() {
+    alertSpy.mockImplementation((title, message, buttons) => {
+      buttons?.find((button) => button.text === 'Remove')?.onPress?.();
+    });
+  }
   const alertSpy = jest.spyOn(Alert, 'alert');
   const navigation = { goBack: jest.fn() };
 
@@ -179,6 +184,8 @@ describe('ManageSubGenresScreen', () => {
   });
 
   it('deletes an unused sub-genre', async () => {
+    confirmRemoveAlert();
+
     const screen = render(
       <ManageSubGenresScreen
         route={{
@@ -215,8 +222,8 @@ describe('ManageSubGenresScreen', () => {
 
     expect(mockDeleteSubGenreOption).not.toHaveBeenCalled();
     expect(alertSpy).toHaveBeenCalledWith(
-      'Cannot remove sub-genre',
-      'This sub-genre is used by existing performances.'
+      'Sub-genre is in use',
+      'Open the usage list to replace or remove this sub-genre from performances first.'
     );
   });
 

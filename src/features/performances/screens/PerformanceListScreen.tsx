@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, View, Alert } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import ScreenContainer from '../../../components/ScreenContainer';
 import AppScrollView from '../../../components/AppScrollView';
@@ -10,7 +10,8 @@ import PerformanceCard from '../components/PerformanceCard';
 import { RootStackParamList } from '../../../navigation/types';
 import { usePerformances } from '../context/PerformancesContext';
 import { SortMode } from '../utils/performanceSort';
-import { useAuth } from '../../auth/context/AuthContext';
+import { openAddMenu } from '../utils/openAddMenu';
+import ResultCount from '../components/ResultCount';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PerformanceList'>;
 
@@ -21,8 +22,7 @@ const SORT_OPTIONS: SortOption<SortMode>[] = [
 ];
 
 export default function PerformanceListScreen({ navigation }: Props) {
-  const { logOut } = useAuth();
-
+  
   const {
     filteredPerformances,
     isLoading,
@@ -30,6 +30,7 @@ export default function PerformanceListScreen({ navigation }: Props) {
     setSearchQuery,
     sortMode,
     setSortMode,
+    performances,
   } = usePerformances();
 
   if (isLoading) {
@@ -38,10 +39,10 @@ export default function PerformanceListScreen({ navigation }: Props) {
         showHeader
         title="Performances"
         subtitle="Track every performance"
+        leftActionLabel="Settings"
+        onLeftActionPress={() => navigation.navigate('Settings')}
         rightActionLabel="Add"
-        onRightActionPress={() =>
-          navigation.navigate('PerformanceForm', { mode: 'add' })
-        }
+        onRightActionPress={() => openAddMenu(navigation)}
       >
         <View style={styles.centered}>
           <ActivityIndicator size="large" />
@@ -55,14 +56,10 @@ export default function PerformanceListScreen({ navigation }: Props) {
       showHeader
       title="Performances"
       subtitle="Track every performance"
-
       leftActionLabel="Settings"
       onLeftActionPress={() => navigation.navigate('Settings')}
-
       rightActionLabel="Add"
-      onRightActionPress={() =>
-        navigation.navigate('PerformanceForm', { mode: 'add' })
-      }
+      onRightActionPress={() => openAddMenu(navigation)}
     >
       <SearchBar
         value={searchQuery}
@@ -74,6 +71,13 @@ export default function PerformanceListScreen({ navigation }: Props) {
         options={SORT_OPTIONS}
         selectedValue={sortMode}
         onChange={setSortMode}
+      />
+
+      <ResultCount
+        count={filteredPerformances.length}
+        total={performances.length}
+        singular="performance"
+        plural="performances"
       />
 
       {filteredPerformances.length === 0 ? (

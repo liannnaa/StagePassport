@@ -41,3 +41,10 @@ yarn-error.*
 /android
 
 /coverage
+
+# scripts
+service-account.json
+scripts
+
+# marketing
+/marketing

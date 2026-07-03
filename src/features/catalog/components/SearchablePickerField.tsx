@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { Keyboard, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppTextInput from '../../../components/AppTextInput';
 import AppFlatList from '../../../components/AppFlatList';
 import PickerField from '../../../components/PickerField';
@@ -45,12 +45,11 @@ export default function SearchablePickerField({
 
     if (!normalized) return options;
 
-    return options.filter((option) => {
-      return (
+    return options.filter(
+      (option) =>
         option.title.toLowerCase().includes(normalized) ||
         (option.subtitle?.toLowerCase().includes(normalized) ?? false)
-      );
-    });
+    );
   }, [options, query]);
 
   function openModal() {
@@ -59,8 +58,31 @@ export default function SearchablePickerField({
   }
 
   function closeModal() {
+    Keyboard.dismiss();
     setVisible(false);
     setQuery('');
+  }
+
+  function handleSelect(option: PickerOption) {
+    Keyboard.dismiss();
+    onSelect(option);
+    closeModal();
+  }
+
+  function handleClear() {
+    Keyboard.dismiss();
+    onClear?.();
+    closeModal();
+  }
+
+  function handleAddNew() {
+    const trimmedQuery = query.trim();
+    Keyboard.dismiss();
+    closeModal();
+
+    requestAnimationFrame(() => {
+      onAddNew?.(trimmedQuery);
+    });
   }
 
   const canShowAddNew = Boolean(onAddNew);
@@ -91,17 +113,12 @@ export default function SearchablePickerField({
             placeholderTextColor={colors.textMuted}
             style={styles.searchInput}
             autoFocus
-            returnKeyType="search"
+            returnKeyType="done"
+            onSubmitEditing={Keyboard.dismiss}
           />
 
           {canShowClear ? (
-            <TouchableOpacity
-              style={styles.clearButton}
-              onPress={() => {
-                onClear?.();
-                closeModal();
-              }}
-            >
+            <TouchableOpacity style={styles.clearButton} onPress={handleClear}>
               <Text style={styles.clearButtonText}>Clear selection</Text>
             </TouchableOpacity>
           ) : null}
@@ -113,10 +130,7 @@ export default function SearchablePickerField({
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.optionRow}
-                onPress={() => {
-                  onSelect(item);
-                  closeModal();
-                }}
+                onPress={() => handleSelect(item)}
               >
                 <Text style={styles.optionTitle}>{item.title}</Text>
                 {item.subtitle ? (
@@ -129,23 +143,17 @@ export default function SearchablePickerField({
                 <Text style={styles.emptyStateText}>No matches found</Text>
               </View>
             }
-            ListFooterComponent={
-              canShowAddNew ? (
-                <TouchableOpacity
-                  style={styles.addRow}
-                  onPress={() => {
-                    onAddNew?.(query);
-                    closeModal();
-                  }}
-                >
-                  <Text style={styles.addRowText}>
-                    {addNewLabel}
-                    {query.trim() ? `: "${query.trim()}"` : ''}
-                  </Text>
-                </TouchableOpacity>
-              ) : null
-            }
           />
+          {canShowAddNew ? (
+            <View style={styles.fixedFooter}>
+              <TouchableOpacity style={styles.addRow} onPress={handleAddNew}>
+                <Text style={styles.addRowText}>
+                  {addNewLabel}
+                  {query.trim() ? `: "${query.trim()}"` : ''}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
         </View>
       </TopSheetModal>
     </>
@@ -176,6 +184,7 @@ const styles = StyleSheet.create({
   list: {
     width: '100%',
     alignSelf: 'stretch',
+    maxHeight: 360,
   },
   optionRow: {
     paddingVertical: 12,
@@ -198,6 +207,12 @@ const styles = StyleSheet.create({
   emptyStateText: {
     color: colors.textSecondary,
     fontSize: 14,
+  },
+  fixedFooter: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+    backgroundColor: colors.surface,
   },
   addRow: {
     paddingVertical: 14,

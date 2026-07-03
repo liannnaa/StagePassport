@@ -16,11 +16,15 @@ import ManageCatalogScreen from './src/features/catalog/screens/ManageCatalogScr
 import ManageGenresScreen from './src/features/catalog/screens/ManageGenresScreen';
 import ManageSubGenresScreen from './src/features/catalog/screens/ManageSubGenresScreen';
 import ManageVenuesScreen from './src/features/catalog/screens/ManageVenuesScreen';
+import ManageBillingsScreen from './src/features/catalog/screens/ManageBillingsScreen';
 import ManageTagsScreen from './src/features/catalog/screens/ManageTagsScreen';
 import { AuthProvider } from './src/features/auth/context/AuthContext';
 import AppGate from './src/navigation/AppGate';
 import SettingsScreen from './src/features/settings/screens/SettingsScreen';
 import CreditsScreen from './src/features/settings/screens/CreditsScreen';
+import ConcertFormScreen from './src/features/performances/screens/ConcertFormScreen';
+import ArtistFormScreen from './src/features/performances/screens/ArtistFormScreen';
+import CatalogUsageScreen from './src/features/catalog/screens/CatalogUsageScreen';
 
 const Tab = createBottomTabNavigator();
 const PerformancesStack = createNativeStackNavigator<RootStackParamList>();
@@ -62,7 +66,14 @@ function TabIcon({
 
 function PerformancesStackNavigator() {
   return (
-    <PerformancesStack.Navigator screenOptions={{ headerShown: false }}>
+    <PerformancesStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: {
+          backgroundColor: colors.background,
+        },
+      }}
+    >
       <PerformancesStack.Screen
         name="PerformanceList"
         component={PerformanceListScreen}
@@ -76,6 +87,9 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
+        sceneStyle: {
+          backgroundColor: colors.background,
+        },
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
@@ -92,6 +106,7 @@ function MainTabs() {
         name="Performances"
         component={PerformancesStackNavigator}
         options={{
+          lazy: false,
           tabBarIcon: ({ color, size }) => (
             <TabIcon
               source={require('./assets/icons/microphone.png')}
@@ -106,6 +121,7 @@ function MainTabs() {
         name="Concerts"
         component={ConcertsScreen}
         options={{
+          lazy: false,
           tabBarIcon: ({ color, size }) => (
             <TabIcon
               source={require('./assets/icons/ticket.png')}
@@ -120,6 +136,7 @@ function MainTabs() {
         name="Artists"
         component={ArtistsScreen}
         options={{
+          lazy: false,
           tabBarIcon: ({ color, size }) => (
             <TabIcon
               source={require('./assets/icons/guitar.png')}
@@ -139,7 +156,11 @@ export default function App() {
       <AppGate>
         <PerformancesProvider>
           <NavigationContainer theme={navigationTheme}>
-            <RootStack.Navigator screenOptions={{ headerShown: false }}>
+            <RootStack.Navigator screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: colors.background },
+              animation: 'slide_from_right',
+            }}>
               <RootStack.Screen name="MainTabs" component={MainTabs} />
               <RootStack.Screen name="Settings" component={SettingsScreen} />
               <RootStack.Screen name="Credits" component={CreditsScreen} />
@@ -156,9 +177,19 @@ export default function App() {
                 component={PerformanceFormScreen}
               />
               <RootStack.Screen
+                name="ConcertForm"
+                component={ConcertFormScreen}
+              />
+              <RootStack.Screen
+                name="ArtistForm"
+                component={ArtistFormScreen}
+              />
+              <RootStack.Screen
                 name="ManageCatalog"
                 component={ManageCatalogScreen}
               />
+              <RootStack.Screen name="CatalogUsage" component={CatalogUsageScreen} />
+              <RootStack.Screen name="ManageBillings" component={ManageBillingsScreen} />
               <RootStack.Screen name="ManageTags" component={ManageTagsScreen} />
               <RootStack.Screen name="ManageVenues" component={ManageVenuesScreen} />
               <RootStack.Screen name="ManageGenres" component={ManageGenresScreen} />

@@ -29,29 +29,44 @@ export default function ManageSubGenresScreen({ route, navigation }: Props) {
     [genreId, getSubGenreOptionsByGenreId]
   );
 
-  async function handleRemoveSubGenre(id: string) {
+  async function handleRemoveSubGenre(id: string, name: string) {
     if (isSubGenreOptionInUse(id)) {
       Alert.alert(
-        'Cannot remove sub-genre',
-        'This sub-genre is used by existing performances.'
+        'Sub-genre is in use',
+        'Open the usage list to replace or remove this sub-genre from performances first.'
       );
       return;
     }
 
-    try {
-      await deleteSubGenreOption(id);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Something went wrong.';
-      Alert.alert('Unable to remove sub-genre', message);
-    }
+    Alert.alert(
+      'Remove sub-genre',
+      `Are you sure you want to remove "${name}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteSubGenreOption(id);
+            } catch (error) {
+              const message =
+                error instanceof Error ? error.message : 'Something went wrong.';
+              Alert.alert('Unable to remove sub-genre', message);
+            }
+          },
+        },
+      ]
+    );
   }
 
   return (
     <ScreenContainer
       showHeader
       title={genreName}
-      subtitle="Manage sub-genres"
+      subtitle={`${subGenres.length} ${
+        subGenres.length === 1 ? 'sub-genre' : 'sub-genres'
+      }`}
       showBackButton
       onBackPress={() => navigation.goBack()}
       rightActionLabel="Add"
@@ -64,21 +79,30 @@ export default function ManageSubGenresScreen({ route, navigation }: Props) {
             body="Add a sub-genre for this genre."
           />
         ) : (
-          subGenres.map((subGenre) => (
-            <CatalogRow
-              key={subGenre.id}
-              title={subGenre.name}
-              disabled={isSubGenreOptionInUse(subGenre.id)}
-              disabledReason={
-                isSubGenreOptionInUse(subGenre.id)
-                  ? 'Used by existing performances'
-                  : undefined
-              }
-              onDelete={() => {
-                void handleRemoveSubGenre(subGenre.id);
-              }}
-            />
-          ))
+          subGenres.map((subGenre) => {
+            const inUse = isSubGenreOptionInUse(subGenre.id);
+
+            return (
+              <CatalogRow
+                key={subGenre.id}
+                title={subGenre.name}
+                inUse={inUse}
+                usageLabel={
+                  inUse ? 'Used by existing performances' : undefined
+                }
+                onViewUsage={() =>
+                  navigation.navigate('CatalogUsage', {
+                    type: 'subGenre',
+                    id: subGenre.id,
+                    label: subGenre.name,
+                    genreId,
+                    genreName,
+                  })
+                }
+                onDelete={() => handleRemoveSubGenre(subGenre.id, subGenre.name)}
+              />
+            );
+          })
         )}
       </AppScrollView>
 

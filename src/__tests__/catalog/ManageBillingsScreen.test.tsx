@@ -1,11 +1,11 @@
 import React from 'react';
 import { Alert } from 'react-native';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import ManageTagsScreen from '../../features/catalog/screens/ManageTagsScreen';
+import ManageBillingsScreen from '../../features/catalog/screens/ManageBillingsScreen';
 
-const mockAddTagOption = jest.fn();
-const mockDeleteTagOption = jest.fn();
-const mockIsTagOptionInUse = jest.fn();
+const mockAddBillingOption = jest.fn();
+const mockDeleteBillingOption = jest.fn();
+const mockIsBillingOptionInUse = jest.fn();
 
 jest.mock('../../components/ScreenContainer', () => {
   const React = require('react');
@@ -107,11 +107,11 @@ jest.mock('../../features/catalog/components/CatalogRow', () => {
   };
 });
 
-jest.mock('../../features/tags/components/AddTagModal', () => {
+jest.mock('../../features/billings/components/AddBillingModal', () => {
   const React = require('react');
   const { Pressable, Text } = require('react-native');
 
-  return function MockAddTagModal({
+  return function MockAddBillingModal({
     visible,
     onSave,
     onClose,
@@ -128,12 +128,12 @@ jest.mock('../../features/tags/components/AddTagModal', () => {
       React.createElement(
         Pressable,
         { onPress: () => onSave('Festival') },
-        React.createElement(Text, null, 'Confirm Add Tag')
+        React.createElement(Text, null, 'Confirm Add Billing')
       ),
       React.createElement(
         Pressable,
         { onPress: onClose },
-        React.createElement(Text, null, 'Close Tag Modal')
+        React.createElement(Text, null, 'Close Billing Modal')
       )
     );
   };
@@ -141,28 +141,28 @@ jest.mock('../../features/tags/components/AddTagModal', () => {
 
 jest.mock('../../features/performances/context/PerformancesContext', () => ({
   usePerformances: () => ({
-    tagOptions: [
+    billingOptions: [
       { id: 'headliner', name: 'Headliner', normalizedName: 'headliner' },
     ],
-    addTagOption: mockAddTagOption,
-    deleteTagOption: mockDeleteTagOption,
-    isTagOptionInUse: mockIsTagOptionInUse,
+    addBillingOption: mockAddBillingOption,
+    deleteBillingOption: mockDeleteBillingOption,
+    isBillingOptionInUse: mockIsBillingOptionInUse,
   }),
 }));
 
-describe('ManageTagsScreen', () => {
+describe('ManageBillingsScreen', () => {
   const alertSpy = jest.spyOn(Alert, 'alert');
   const navigation = { goBack: jest.fn() };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockIsTagOptionInUse.mockReturnValue(false);
+    mockIsBillingOptionInUse.mockReturnValue(false);
   });
 
-  it('renders existing tags', () => {
+  it('renders existing billings', () => {
     const screen = render(
-      <ManageTagsScreen
-        route={{ key: '1', name: 'ManageTags' } as any}
+      <ManageBillingsScreen
+        route={{ key: '1', name: 'ManageBillings' } as any}
         navigation={navigation as any}
       />
     );
@@ -170,10 +170,14 @@ describe('ManageTagsScreen', () => {
     expect(screen.getByText('Headliner')).toBeTruthy();
   });
 
-  it('deletes an unused tag', async () => {
+  it('deletes an unused billing', async () => {
+    alertSpy.mockImplementation((title, message, buttons) => {
+      buttons?.find((button) => button.text === 'Remove')?.onPress?.();
+    });
+
     const screen = render(
-      <ManageTagsScreen
-        route={{ key: '1', name: 'ManageTags' } as any}
+      <ManageBillingsScreen
+        route={{ key: '1', name: 'ManageBillings' } as any}
         navigation={navigation as any}
       />
     );
@@ -181,73 +185,73 @@ describe('ManageTagsScreen', () => {
     fireEvent.press(screen.getByText('Remove Headliner'));
 
     await waitFor(() => {
-      expect(mockDeleteTagOption).toHaveBeenCalledWith('headliner');
+      expect(mockDeleteBillingOption).toHaveBeenCalledWith('headliner');
     });
   });
 
-  it('blocks deleting a used tag', () => {
-    mockIsTagOptionInUse.mockReturnValue(true);
+  it('blocks deleting a used billing', () => {
+    mockIsBillingOptionInUse.mockReturnValue(true);
 
     const screen = render(
-      <ManageTagsScreen
-        route={{ key: '1', name: 'ManageTags' } as any}
+      <ManageBillingsScreen
+        route={{ key: '1', name: 'ManageBillings' } as any}
         navigation={navigation as any}
       />
     );
 
     fireEvent.press(screen.getByText('Remove Headliner'));
 
-    expect(mockDeleteTagOption).not.toHaveBeenCalled();
+    expect(mockDeleteBillingOption).not.toHaveBeenCalled();
     expect(alertSpy).toHaveBeenCalledWith(
-      'Cannot remove tag',
-      'This tag is used by existing performances.'
+      'Billing is in use',
+      'Open the usage list to replace or remove this billing from performances first.'
     );
   });
 
-  it('adds a new tag', async () => {
+  it('adds a new billing', async () => {
     const screen = render(
-      <ManageTagsScreen
-        route={{ key: '1', name: 'ManageTags' } as any}
+      <ManageBillingsScreen
+        route={{ key: '1', name: 'ManageBillings' } as any}
         navigation={navigation as any}
       />
     );
 
     fireEvent.press(screen.getByText('Add'));
-    fireEvent.press(screen.getByText('Confirm Add Tag'));
+    fireEvent.press(screen.getByText('Confirm Add Billing'));
 
     await waitFor(() => {
-      expect(mockAddTagOption).toHaveBeenCalledWith('Festival');
+      expect(mockAddBillingOption).toHaveBeenCalledWith('Festival');
     });
   });
 
-  it('shows error when addTagOption fails', async () => {
-    mockAddTagOption.mockRejectedValueOnce(new Error('Add tag failed'));
+  it('shows error when addBillingOption fails', async () => {
+    mockAddBillingOption.mockRejectedValueOnce(new Error('Add billing failed'));
 
     const screen = render(
-      <ManageTagsScreen
-        route={{ key: '1', name: 'ManageTags' } as any}
+      <ManageBillingsScreen
+        route={{ key: '1', name: 'ManageBillings' } as any}
         navigation={navigation as any}
       />
     );
 
     fireEvent.press(screen.getByText('Add'));
-    fireEvent.press(screen.getByText('Confirm Add Tag'));
+    fireEvent.press(screen.getByText('Confirm Add Billing'));
 
     await waitFor(() => {
       expect(alertSpy).toHaveBeenCalledWith(
-        'Unable to add tag',
-        'Add tag failed'
+        'Unable to add billing',
+        'Add billing failed'
       );
     });
   });
 
-  it('shows empty state when no tags exist', () => {
+  it('shows empty state when no billings exist', () => {
     jest.doMock('../../features/performances/context/PerformancesContext', () => ({
       usePerformances: () => ({
-        tagOptions: [],
-        addTagOption: mockAddTagOption,
-        deleteTagOption: mockDeleteTagOption,
-        isTagOptionInUse: mockIsTagOptionInUse,
+        billingOptions: [],
+        addBillingOption: mockAddBillingOption,
+        deleteBillingOption: mockDeleteBillingOption,
+        isBillingOptionInUse: mockIsBillingOptionInUse,
       }),
     }));
   });

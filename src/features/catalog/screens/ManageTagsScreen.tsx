@@ -22,29 +22,44 @@ export default function ManageTagsScreen({ navigation }: Props) {
 
   const [showAddTagModal, setShowAddTagModal] = useState(false);
 
-  async function handleRemoveTag(id: string) {
+  async function handleRemoveTag(id: string, name: string) {
     if (isTagOptionInUse(id)) {
       Alert.alert(
-        'Cannot remove tag',
-        'This tag is used by existing performances.'
+        'Tag is in use',
+        'Open the usage list to replace or remove this tag from performances first.'
       );
       return;
     }
 
-    try {
-      await deleteTagOption(id);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Something went wrong.';
-      Alert.alert('Unable to remove tag', message);
-    }
+    Alert.alert(
+      'Remove tag',
+      `Are you sure you want to remove "${name}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteTagOption(id);
+            } catch (error) {
+              const message =
+                error instanceof Error ? error.message : 'Something went wrong.';
+              Alert.alert('Unable to remove tag', message);
+            }
+          },
+        },
+      ]
+    );
   }
 
   return (
     <ScreenContainer
       showHeader
       title="Tags"
-      subtitle="Manage reusable tags"
+      subtitle={`${tagOptions.length} ${
+        tagOptions.length === 1 ? 'tag' : 'tags'
+      }`}
       showBackButton
       onBackPress={() => navigation.goBack()}
       rightActionLabel="Add"
@@ -61,15 +76,20 @@ export default function ManageTagsScreen({ navigation }: Props) {
             <CatalogRow
               key={tag.id}
               title={tag.name}
-              disabled={isTagOptionInUse(tag.id)}
-              disabledReason={
+              inUse={isTagOptionInUse(tag.id)}
+              usageLabel={
                 isTagOptionInUse(tag.id)
                   ? 'Used by existing performances'
                   : undefined
               }
-              onDelete={() => {
-                void handleRemoveTag(tag.id);
-              }}
+              onViewUsage={() =>
+                navigation.navigate('CatalogUsage', {
+                  type: 'tag',
+                  id: tag.id,
+                  label: tag.name,
+                })
+              }
+              onDelete={() => handleRemoveTag(tag.id, tag.name)}
             />
           ))
         )}

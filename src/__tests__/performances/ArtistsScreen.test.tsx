@@ -4,8 +4,18 @@ import ArtistsScreen from '../../features/performances/screens/ArtistsScreen';
 
 const mockSetArtistSearchQuery = jest.fn();
 const mockSetArtistSortMode = jest.fn();
-
 const mockNavigate = jest.fn();
+
+const mockArtistGroups = [
+  {
+    artistName: 'Faye Webster',
+    performances: [],
+    performanceCount: 2,
+    latestDate: '04-21-26',
+    genre: 'Indie',
+    subGenre: 'Indie Pop',
+  },
+];
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
@@ -17,25 +27,22 @@ jest.mock('../../components/ScreenContainer', () => {
   const React = require('react');
   const { Text } = require('react-native');
 
-  return function MockScreenContainer({
-    children,
-    title,
-    subtitle,
-  }: any) {
-    return React.createElement(
-      React.Fragment,
-      null,
-      title ? React.createElement(Text, null, title) : null,
-      subtitle ? React.createElement(Text, null, subtitle) : null,
-      children
+  return function MockScreenContainer({ children, title, subtitle }: any) {
+    return (
+      <>
+        {title ? <Text>{title}</Text> : null}
+        {subtitle ? <Text>{subtitle}</Text> : null}
+        {children}
+      </>
     );
   };
 });
 
 jest.mock('../../components/AppScrollView', () => {
   const React = require('react');
+
   return function MockAppScrollView({ children }: any) {
-    return React.createElement(React.Fragment, null, children);
+    return <>{children}</>;
   };
 });
 
@@ -44,11 +51,13 @@ jest.mock('../../components/SearchBar', () => {
   const { TextInput } = require('react-native');
 
   return function MockSearchBar({ value, onChangeText }: any) {
-    return React.createElement(TextInput, {
-      value,
-      onChangeText,
-      placeholder: 'Search artist...',
-    });
+    return (
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder="Search artist..."
+      />
+    );
   };
 });
 
@@ -57,19 +66,14 @@ jest.mock('../../components/SortPills', () => {
   const { Pressable, Text } = require('react-native');
 
   return function MockSortPills({ options, onChange }: any) {
-    return React.createElement(
-      React.Fragment,
-      null,
-      ...options.map((option: any) =>
-        React.createElement(
-          Pressable,
-          {
-            key: option.value,
-            onPress: () => onChange(option.value),
-          },
-          React.createElement(Text, null, option.label)
-        )
-      )
+    return (
+      <>
+        {options.map((option: any) => (
+          <Pressable key={option.value} onPress={() => onChange(option.value)}>
+            <Text>{option.label}</Text>
+          </Pressable>
+        ))}
+      </>
     );
   };
 });
@@ -79,11 +83,11 @@ jest.mock('../../components/EmptyState', () => {
   const { Text } = require('react-native');
 
   return function MockEmptyState({ title, body }: any) {
-    return React.createElement(
-      React.Fragment,
-      null,
-      React.createElement(Text, null, title),
-      React.createElement(Text, null, body)
+    return (
+      <>
+        <Text>{title}</Text>
+        <Text>{body}</Text>
+      </>
     );
   };
 });
@@ -93,10 +97,10 @@ jest.mock('../../features/performances/components/ArtistGroupCard', () => {
   const { Pressable, Text } = require('react-native');
 
   return function MockArtistGroupCard({ group, onPress }: any) {
-    return React.createElement(
-      Pressable,
-      { onPress },
-      React.createElement(Text, null, group.artistName)
+    return (
+      <Pressable onPress={onPress}>
+        <Text>{group.artistName}</Text>
+      </Pressable>
     );
   };
 });
@@ -112,16 +116,8 @@ describe('ArtistsScreen', () => {
     jest.clearAllMocks();
 
     mockUsePerformances.mockReturnValue({
-      filteredArtistGroups: [
-        {
-          artistName: 'Faye Webster',
-          performances: [],
-          performanceCount: 2,
-          latestDate: '04-21-26',
-          genre: 'Indie',
-          subGenre: 'Indie Pop',
-        },
-      ],
+      filteredArtistGroups: mockArtistGroups,
+      artistGroups: mockArtistGroups,
       artistSearchQuery: '',
       setArtistSearchQuery: mockSetArtistSearchQuery,
       artistSortMode: 'artist',
@@ -141,6 +137,7 @@ describe('ArtistsScreen', () => {
   it('shows empty state when no artists match', () => {
     mockUsePerformances.mockReturnValue({
       filteredArtistGroups: [],
+      artistGroups: [],
       artistSearchQuery: '',
       setArtistSearchQuery: mockSetArtistSearchQuery,
       artistSortMode: 'artist',

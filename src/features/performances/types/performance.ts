@@ -4,7 +4,8 @@ export type Performance = {
     venue: string;
     city: string;
     date: string; // MM-DD-YY
-    tag: string;
+    billing: string;
+    tags: string[];
     genre: string;
     subGenre: string;
     showId: string;

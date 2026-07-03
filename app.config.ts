@@ -4,10 +4,10 @@ export default {
   expo: {
     name: 'StagePassport',
     slug: 'StagePassport',
-    version: '1.0.0',
+    version: '1.1.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
-    userInterfaceStyle: 'light',
+    userInterfaceStyle: 'dark',
     splash: {
       image: './assets/icon.png',
       resizeMode: 'contain',

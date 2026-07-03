@@ -11,11 +11,14 @@ const mockSyncGenresForArtist = jest.fn();
 const mockAddVenueOption = jest.fn();
 const mockAddGenreOption = jest.fn();
 const mockAddSubGenreOption = jest.fn();
-const mockAddTagOption = jest.fn();
+const mockAddBillingOption = jest.fn();
 const mockGetPerformanceById = jest.fn();
 const mockGetSubGenreOptionsByGenreId = jest.fn(
   (): SubGenreOption[] => []
 );
+const mockAddTagOption = jest.fn();
+const mockDeletePerformance = jest.fn();
+const mockUpdateConcertPerformances = jest.fn();
 
 const mockFindMatchingPerformanceByShowId = jest.fn<
   Performance | undefined,
@@ -249,7 +252,7 @@ jest.mock('../../features/catalog/components/SearchablePickerField', () => {
       onAddNew
         ? React.createElement(
             Pressable,
-            { onPress: () => onAddNew(`${label} draft`) },
+            { onPress: () => onAddNew('') },
             React.createElement(Text, null, `Add ${label}`)
           )
         : null
@@ -320,11 +323,11 @@ jest.mock('../../features/genres/components/AddSubGenreModal', () => {
   };
 });
 
-jest.mock('../../features/tags/components/AddTagModal', () => {
+jest.mock('../../features/billings/components/AddBillingModal', () => {
   const React = require('react');
   const { Pressable, Text } = require('react-native');
 
-  return function MockAddTagModal({
+  return function MockAddBillingModal({
     visible,
     onSave,
   }: {
@@ -336,7 +339,7 @@ jest.mock('../../features/tags/components/AddTagModal', () => {
     return React.createElement(
       Pressable,
       { onPress: () => onSave('Headliner') },
-      React.createElement(Text, null, 'Confirm Add Tag Modal')
+      React.createElement(Text, null, 'Confirm Add Billing Modal')
     );
   };
 });
@@ -370,6 +373,7 @@ jest.mock('../../features/genres/utils/artistGenreMatching', () => ({
 jest.mock('../../features/performances/context/PerformancesContext', () => ({
   usePerformances: () => ({
     performances: [],
+
     venueOptions: [
       {
         id: 'fox-theatre-atlanta',
@@ -378,17 +382,50 @@ jest.mock('../../features/performances/context/PerformancesContext', () => ({
         normalizedKey: 'fox-theatre-atlanta',
       },
     ],
-    genreOptions: [{ id: 'indie', name: 'Indie', normalizedName: 'indie' }],
-    tagOptions: [{ id: 'headliner', name: 'Headliner' }],
+
+    genreOptions: [
+      {
+        id: 'indie',
+        name: 'Indie',
+        normalizedName: 'indie',
+      },
+    ],
+
+    billingOptions: [
+      {
+        id: 'headliner',
+        name: 'Headliner',
+      },
+    ],
+
+    tagOptions: [
+      {
+        id: 'favorite',
+        name: 'Favorite',
+      },
+      {
+        id: 'festival',
+        name: 'Festival',
+      },
+    ],
+
     addVenueOption: mockAddVenueOption,
     addGenreOption: mockAddGenreOption,
-    getSubGenreOptionsByGenreId: mockGetSubGenreOptionsByGenreId,
     addSubGenreOption: mockAddSubGenreOption,
+    addBillingOption: mockAddBillingOption,
+    addTagOption: mockAddTagOption,
+
+    getSubGenreOptionsByGenreId: mockGetSubGenreOptionsByGenreId,
+
     addPerformance: mockAddPerformance,
     updatePerformance: mockUpdatePerformance,
+    updateConcertPerformances: mockUpdateConcertPerformances,
+
     syncGenresForArtist: mockSyncGenresForArtist,
+
     getPerformanceById: mockGetPerformanceById,
-    addTagOption: mockAddTagOption,
+
+    deletePerformance: mockDeletePerformance,
   }),
 }));
 
@@ -430,7 +467,7 @@ describe('PerformanceFormScreen', () => {
           showName: 'Atlanta Show',
           venue: '',
           city: '',
-          tag: '',
+          billing: '',
           genre: '',
           subGenre: '',
         })
@@ -466,7 +503,8 @@ describe('PerformanceFormScreen', () => {
       venue: 'Fox Theatre',
       city: 'Atlanta',
       date: '04-21-26',
-      tag: 'Headliner',
+      billing: 'Headliner',
+      tags: [],
       genre: 'Indie',
       subGenre: 'Indie Pop',
       showId: 'atlanta-show-04-21-26',
@@ -504,7 +542,8 @@ describe('PerformanceFormScreen', () => {
       venue: '',
       city: '',
       date: '04-21-26',
-      tag: '',
+      billing: '',
+      tags: [],
       genre: '',
       subGenre: '',
       showId: 'old-name-04-21-26',
@@ -517,16 +556,18 @@ describe('PerformanceFormScreen', () => {
     });
 
     const inputs = getInputs(screen);
+
     fireEvent.changeText(inputs[1], 'New Name');
 
     fireEvent.press(screen.getByText('Save Changes'));
 
     await waitFor(() => {
-      expect(mockUpdatePerformance).toHaveBeenCalledWith(
-        'p1',
+      expect(mockUpdateConcertPerformances).toHaveBeenCalledWith(
+        'old-name-04-21-26',
         expect.objectContaining({
-          artist: 'Faye Webster',
-          showName: 'New Name',
+          shared: expect.objectContaining({
+            showName: 'New Name',
+          }),
         })
       );
     });
@@ -541,7 +582,8 @@ describe('PerformanceFormScreen', () => {
       venue: 'Fox Theatre',
       city: 'Atlanta',
       date: '04-21-26',
-      tag: '',
+      billing: '',
+      tags: [],
       genre: '',
       subGenre: '',
       showId: 'atlanta-show-04-21-26',
@@ -556,7 +598,7 @@ describe('PerformanceFormScreen', () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          'Venue is locked because another performance already uses this show ID.'
+          'Saving will update venue for all performances under this concert.'
         )
       ).toBeTruthy();
       expect(screen.getByText('Fox Theatre • Atlanta')).toBeTruthy();
@@ -570,7 +612,8 @@ describe('PerformanceFormScreen', () => {
       venue: '',
       city: '',
       date: '04-20-26',
-      tag: '',
+      billing: '',
+      tags: [],
       genre: 'Indie',
       subGenre: 'Indie Pop',
       showId: 'older-show-04-20-26',
@@ -595,7 +638,8 @@ describe('PerformanceFormScreen', () => {
       venue: '',
       city: '',
       date: '04-21-26',
-      tag: '',
+      billing: '',
+      tags: [],
       genre: 'Indie',
       subGenre: 'Indie Pop',
       showId: 'atlanta-show-04-21-26',
@@ -622,7 +666,8 @@ describe('PerformanceFormScreen', () => {
       venue: '',
       city: '',
       date: '04-21-26',
-      tag: '',
+      billing: '',
+      tags: [],
       genre: 'Indie',
       subGenre: 'Indie Pop',
       showId: 'atlanta-show-04-21-26',
@@ -642,83 +687,58 @@ describe('PerformanceFormScreen', () => {
     });
   });
 
-  it('adds a tag from the tag modal flow', async () => {
-    mockAddTagOption.mockReturnValue({
-      id: 'headliner',
-      name: 'Headliner',
-      normalizedName: 'headliner',
-    });
-
+  it('uses existing billing option when add matches existing value', async () => {
     const screen = await renderScreen({ mode: 'add' });
 
-    fireEvent.press(screen.getByText('Add Tag'));
-    fireEvent.press(screen.getByText('Confirm Add Tag Modal'));
+    fireEvent.press(screen.getByText('Add Billing'));
+    fireEvent.press(screen.getByText('Confirm Add Billing Modal'));
 
     await waitFor(() => {
-      expect(mockAddTagOption).toHaveBeenCalledWith('Headliner');
+      expect(alertSpy).toHaveBeenCalledWith('Using existing option');
     });
 
     expect(screen.getByText('Headliner')).toBeTruthy();
   });
 
-  it('adds a venue from the venue modal flow', async () => {
-    mockAddVenueOption.mockReturnValue({
-      id: 'fox-theatre-atlanta',
-      venueName: 'Fox Theatre',
-      city: 'Atlanta',
-      normalizedKey: 'fox-theatre::atlanta',
-    });
-
+  it('uses existing venue option when add matches existing value', async () => {
     const screen = await renderScreen({ mode: 'add' });
 
     fireEvent.press(screen.getByText('Add Venue'));
     fireEvent.press(screen.getByText('Confirm Add Venue Modal'));
 
     await waitFor(() => {
-      expect(mockAddVenueOption).toHaveBeenCalledWith('Fox Theatre', 'Atlanta');
+      expect(alertSpy).toHaveBeenCalledWith('Using existing option');
     });
 
     expect(screen.getByText('Fox Theatre • Atlanta')).toBeTruthy();
   });
 
-  it('adds a genre from the genre modal flow', async () => {
-    mockAddGenreOption.mockReturnValue({
-      id: 'indie',
-      name: 'Indie',
-      normalizedName: 'indie',
-    });
-
+  it('uses existing genre option when add matches existing value', async () => {
     const screen = await renderScreen({ mode: 'add' });
 
     fireEvent.press(screen.getByText('Add Genre'));
     fireEvent.press(screen.getByText('Confirm Add Genre Modal'));
 
     await waitFor(() => {
-      expect(mockAddGenreOption).toHaveBeenCalledWith('Indie');
+      expect(alertSpy).toHaveBeenCalledWith('Using existing option');
     });
 
     expect(screen.getByText('Indie')).toBeTruthy();
   });
 
-  it('adds a sub-genre from the sub-genre modal flow', async () => {
+  it('uses existing sub-genre option when add matches existing value', async () => {
     mockGetPerformanceById.mockReturnValue({
       id: 'p1',
       artist: 'Faye Webster',
       venue: '',
       city: '',
       date: '04-21-26',
-      tag: '',
+      billing: '',
+      tags: [],
       genre: 'Indie',
       subGenre: '',
       showId: 'atlanta-show-04-21-26',
       showName: 'Atlanta Show',
-    });
-
-    mockAddSubGenreOption.mockReturnValue({
-      id: 'indie::indie pop',
-      genreId: 'indie',
-      name: 'Indie Pop',
-      normalizedKey: 'indie::indie pop',
     });
 
     const screen = await renderScreen({
@@ -730,11 +750,7 @@ describe('PerformanceFormScreen', () => {
     fireEvent.press(screen.getByText('Confirm Add SubGenre Modal'));
 
     await waitFor(() => {
-      expect(mockAddSubGenreOption).toHaveBeenCalledWith(
-        'indie',
-        'Indie',
-        'Indie Pop'
-      );
+      expect(alertSpy).toHaveBeenCalledWith('Using existing option');
     });
 
     expect(screen.getByText('Indie Pop')).toBeTruthy();
@@ -763,14 +779,17 @@ describe('PerformanceFormScreen', () => {
       venue: '',
       city: '',
       date: '04-21-26',
-      tag: '',
+      billing: '',
+      tags: [],
       genre: '',
       subGenre: '',
       showId: 'old-name-04-21-26',
       showName: 'Old Name',
     });
 
-    mockUpdatePerformance.mockRejectedValueOnce(new Error('Update failed'));
+    mockUpdateConcertPerformances.mockRejectedValueOnce(
+      new Error('Update failed')
+    );
 
     const screen = await renderScreen({
       mode: 'edit',
@@ -780,7 +799,10 @@ describe('PerformanceFormScreen', () => {
     fireEvent.press(screen.getByText('Save Changes'));
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith('Save failed', 'Update failed');
+      expect(alertSpy).toHaveBeenCalledWith(
+        'Save failed',
+        'Update failed'
+      );
     });
   });
 
@@ -791,7 +813,8 @@ describe('PerformanceFormScreen', () => {
       venue: '',
       city: '',
       date: '04-21-26',
-      tag: '',
+      billing: '',
+      tags: [],
       genre: '',
       subGenre: '',
       showId: 'atlanta-show-04-21-26',
@@ -806,7 +829,7 @@ describe('PerformanceFormScreen', () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          'Venue is locked because another performance already uses this show ID.'
+          'Saving will update venue for all performances under this concert.'
         )
       ).toBeTruthy();
       expect(screen.getByText('Choose or add a venue')).toBeTruthy();
@@ -830,7 +853,8 @@ describe('PerformanceFormScreen', () => {
       venue: '',
       city: '',
       date: '04-20-26',
-      tag: '',
+      billing: '',
+      tags: [],
       genre: '',
       subGenre: '',
       showId: 'older-show-04-20-26',
@@ -897,24 +921,24 @@ describe('PerformanceFormScreen', () => {
   it('cancels the date picker and keeps the original date', async () => {
     const screen = await renderScreen({ mode: 'add' });
 
-    fireEvent.press(screen.getByText('04-21-26'));
+    fireEvent.press(screen.getByText('05-25-26'));
     fireEvent.press(screen.getByText('Pick New Date'));
     fireEvent.press(screen.getByText('Cancel Date Picker'));
 
     await waitFor(() => {
-      expect(screen.getByText('04-21-26')).toBeTruthy();
+      expect(screen.getByText('05-25-26')).toBeTruthy();
     });
   });
 
   it('ignores date picker onChange when no date is selected', async () => {
     const screen = await renderScreen({ mode: 'add' });
 
-    fireEvent.press(screen.getByText('04-21-26'));
+    fireEvent.press(screen.getByText('05-25-26'));
     fireEvent.press(screen.getByText('Pick No Date'));
     fireEvent.press(screen.getByText('Confirm Date Picker'));
 
     await waitFor(() => {
-      expect(screen.getByText('04-21-26')).toBeTruthy();
+      expect(screen.getByText('05-25-26')).toBeTruthy();
     });
   });
 
@@ -932,29 +956,29 @@ describe('PerformanceFormScreen', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('ManageCatalog');
   });
 
-  it('selects an existing tag from the picker', async () => {
+  it('selects an existing billing from the picker', async () => {
     const screen = await renderScreen({ mode: 'add' });
 
-    fireEvent.press(screen.getByText('Select Tag'));
+    fireEvent.press(screen.getByText('Select Billing'));
 
     await waitFor(() => {
       expect(screen.getByText('Headliner')).toBeTruthy();
     });
   });
 
-  it('clears the selected tag', async () => {
+  it('clears the selected billing', async () => {
     const screen = await renderScreen({ mode: 'add' });
 
-    fireEvent.press(screen.getByText('Select Tag'));
+    fireEvent.press(screen.getByText('Select Billing'));
 
     await waitFor(() => {
       expect(screen.getByText('Headliner')).toBeTruthy();
     });
 
-    fireEvent.press(screen.getByText('Clear Tag'));
+    fireEvent.press(screen.getByText('Clear Billing'));
 
     await waitFor(() => {
-      expect(screen.getByText('Choose or add a tag')).toBeTruthy();
+      expect(screen.getByText('Choose or add a billing')).toBeTruthy();
     });
   });
 
@@ -991,7 +1015,8 @@ describe('PerformanceFormScreen', () => {
       venue: '',
       city: '',
       date: '04-21-26',
-      tag: '',
+      billing: '',
+      tags: [],
       genre: '',
       subGenre: 'Indie Pop',
       showId: 'atlanta-show-04-21-26',
@@ -1018,7 +1043,8 @@ describe('PerformanceFormScreen', () => {
       venue: '',
       city: '',
       date: '04-21-26',
-      tag: '',
+      billing: '',
+      tags: [],
       genre: 'Indie',
       subGenre: '',
       showId: 'atlanta-show-04-21-26',
@@ -1053,7 +1079,8 @@ describe('PerformanceFormScreen', () => {
       venue: '',
       city: '',
       date: '04-21-26',
-      tag: '',
+      billing: '',
+      tags: [],
       genre: 'Indie',
       subGenre: 'Indie Pop',
       showId: 'atlanta-show-04-21-26',
@@ -1088,7 +1115,8 @@ describe('PerformanceFormScreen', () => {
       venue: '',
       city: '',
       date: '04-21-26',
-      tag: '',
+      billing: '',
+      tags: [],
       genre: 'Unknown Genre',
       subGenre: 'Indie Pop',
       showId: 'atlanta-show-04-21-26',
@@ -1103,86 +1131,6 @@ describe('PerformanceFormScreen', () => {
     await waitFor(() => {
       expect(screen.getByText('Unknown Genre')).toBeTruthy();
       expect(screen.getByText('Select a genre first')).toBeTruthy();
-    });
-  });
-
-  it('shows generic error when addTagOption rejects with a non-Error', async () => {
-    mockAddTagOption.mockRejectedValueOnce('bad tag failure');
-
-    const screen = await renderScreen({ mode: 'add' });
-
-    fireEvent.press(screen.getByText('Add Tag'));
-    fireEvent.press(screen.getByText('Confirm Add Tag Modal'));
-
-    await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith(
-        'Unable to add tag',
-        'Something went wrong.'
-      );
-    });
-  });
-
-  it('shows generic error when addVenueOption rejects with a non-Error', async () => {
-    mockAddVenueOption.mockRejectedValueOnce('bad venue failure');
-
-    const screen = await renderScreen({ mode: 'add' });
-
-    fireEvent.press(screen.getByText('Add Venue'));
-    fireEvent.press(screen.getByText('Confirm Add Venue Modal'));
-
-    await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith(
-        'Unable to add venue',
-        'Something went wrong.'
-      );
-    });
-  });
-
-  it('shows generic error when addGenreOption rejects with a non-Error', async () => {
-    mockAddGenreOption.mockRejectedValueOnce('bad genre failure');
-
-    const screen = await renderScreen({ mode: 'add' });
-
-    fireEvent.press(screen.getByText('Add Genre'));
-    fireEvent.press(screen.getByText('Confirm Add Genre Modal'));
-
-    await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith(
-        'Unable to add genre',
-        'Something went wrong.'
-      );
-    });
-  });
-
-  it('shows generic error when addSubGenreOption rejects with a non-Error', async () => {
-    mockGetPerformanceById.mockReturnValue({
-      id: 'p1',
-      artist: 'Faye Webster',
-      venue: '',
-      city: '',
-      date: '04-21-26',
-      tag: '',
-      genre: 'Indie',
-      subGenre: '',
-      showId: 'atlanta-show-04-21-26',
-      showName: 'Atlanta Show',
-    });
-
-    mockAddSubGenreOption.mockRejectedValueOnce('bad sub-genre failure');
-
-    const screen = await renderScreen({
-      mode: 'edit',
-      performanceId: 'p1',
-    });
-
-    fireEvent.press(screen.getByText('Add Sub-Genre'));
-    fireEvent.press(screen.getByText('Confirm Add SubGenre Modal'));
-
-    await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith(
-        'Unable to add sub-genre',
-        'Something went wrong.'
-      );
     });
   });
 

@@ -79,10 +79,17 @@ export default function PerformanceDetailScreen({ route, navigation }: Props) {
     >
       <AppScrollView contentContainerStyle={styles.container}>
         <DetailSection label="Show Name" value={performance.showName} />
-        <DetailSection label="Venue" value={performance.venue || '—'} />
-        <DetailSection label="City" value={performance.city || '—'} />
+       <DetailSection
+          label="Venue"
+          value={
+            [performance.venue, performance.city]
+              .filter((v) => v?.trim().length > 0)
+              .join(' • ') || '—'
+          }
+        />
         <DetailSection label="Date" value={performance.date} />
-        <DetailSection label="Tag" value={performance.tag || '—'} />
+        <DetailSection label="Billing" value={performance.billing || '—'} />
+        <DetailSection label="Tags" value={performance.tags && performance.tags.length > 0 ? performance.tags.join(' • ') : '—'} />
         <DetailSection label="Genre" value={performance.genre || '—'} />
         <DetailSection label="Sub-Genre" value={performance.subGenre || '—'} />
         <DetailSection label="Show ID" value={performance.showId} />

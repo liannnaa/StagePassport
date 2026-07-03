@@ -17,7 +17,7 @@ export default function SettingsScreen({ navigation }: any) {
       <View style={styles.container}>
         <SettingsCard
           title="Manage Catalog"
-          subtitle="Tags, venues, genres"
+          subtitle="Billings, tags, venues, genres"
           onPress={() => navigation.navigate('ManageCatalog')}
         />
 

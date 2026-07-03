@@ -1,16 +1,13 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import ScreenContainer from '../../../components/ScreenContainer';
-import AppScrollView from '../../../components/AppScrollView';
-import SearchBar from '../../../components/SearchBar';
-import SortPills, { SortOption } from '../../../components/SortPills';
-import EmptyState from '../../../components/EmptyState';
+import GroupedEntityScreen from '../components/GroupedEntityScreen';
 import ArtistGroupCard from '../components/ArtistGroupCard';
 import { RootStackParamList } from '../../../navigation/types';
 import { usePerformances } from '../context/PerformancesContext';
 import { ArtistGroupSortMode } from '../utils/groupSort';
+import { openAddMenu } from '../utils/openAddMenu';
+import { SortOption } from '../../../components/SortPills';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -28,75 +25,44 @@ export default function ArtistsScreen() {
     artistSortMode,
     setArtistSortMode,
     isLoading,
+    artistGroups,
   } = usePerformances();
 
   const navigation = useNavigation<NavigationProp>();
 
-  if (isLoading) {
-    return (
-      <ScreenContainer
-        showHeader
-        title="Artists"
-        subtitle="Grouped by artist"
-      >
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" />
-        </View>
-      </ScreenContainer>
-    );
-  }
-
   return (
-    <ScreenContainer
-      showHeader
+    <GroupedEntityScreen
       title="Artists"
       subtitle="Grouped by artist"
-    >
-      <SearchBar
-        value={artistSearchQuery}
-        onChangeText={setArtistSearchQuery}
-        placeholder="Search artist..."
-      />
-
-      <SortPills
-        options={SORT_OPTIONS}
-        selectedValue={artistSortMode}
-        onChange={setArtistSortMode}
-      />
-
-      {filteredArtistGroups.length === 0 ? (
-        <EmptyState
-          title="No matching artists"
-          body="Try a different search or add performances first."
+      searchValue={artistSearchQuery}
+      onSearchChange={setArtistSearchQuery}
+      searchPlaceholder="Search artist..."
+      sortOptions={SORT_OPTIONS}
+      selectedSort={artistSortMode}
+      onSortChange={setArtistSortMode}
+      isLoading={isLoading}
+      items={filteredArtistGroups}
+      emptyTitle="No matching artists"
+      emptyBody="Try a different search or add performances first."
+      onSettingsPress={() => navigation.navigate('Settings')}
+      onAddPress={() => openAddMenu(navigation)}
+      renderItem={(item) => (
+        <ArtistGroupCard
+          key={item.artistName}
+          group={item}
+          onPress={() =>
+            navigation.navigate('GroupedPerformances', {
+              mode: 'artist',
+              artistName: item.artistName,
+              title: item.artistName,
+            })
+          }
         />
-      ) : (
-        <AppScrollView contentContainerStyle={styles.listContent}>
-          {filteredArtistGroups.map((item) => (
-            <ArtistGroupCard
-              key={item.artistName}
-              group={item}
-              onPress={() =>
-                navigation.navigate('GroupedPerformances', {
-                  mode: 'artist',
-                  artistName: item.artistName,
-                  title: item.artistName,
-                })
-              }
-            />
-          ))}
-        </AppScrollView>
       )}
-    </ScreenContainer>
+      filteredGroupsLength={filteredArtistGroups.length}
+      groupsLength={artistGroups.length}
+      singularName='artist'
+      pluralName='artists'
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  listContent: {
-    paddingBottom: 24,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});

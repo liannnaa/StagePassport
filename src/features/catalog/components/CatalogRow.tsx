@@ -5,63 +5,126 @@ import { colors, radius, spacing } from '../../../theme/tokens';
 type CatalogRowProps = {
   title: string;
   subtitle?: string;
-  disabled?: boolean;
-  disabledReason?: string;
+  inUse?: boolean;
+  usageLabel?: string;
+  onViewUsage?: () => void;
+  onEdit?: () => void;
   onDelete: () => void;
+  onPress?: () => void;
+  onManageSubItems?: () => void;
+  manageSubItemsLabel?: string;
 };
 
 export default function CatalogRow({
   title,
   subtitle,
-  disabled = false,
-  disabledReason,
+  inUse = false,
+  usageLabel,
+  onViewUsage,
+  onEdit,
   onDelete,
+  onPress,
+  onManageSubItems,
+  manageSubItemsLabel = 'Manage',
 }: CatalogRowProps) {
-  return (
+  const content = (
     <View style={styles.row}>
       <View style={styles.textContainer}>
         <Text style={styles.title}>{title}</Text>
+
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-        {disabled && disabledReason ? (
-          <Text style={styles.disabledText}>{disabledReason}</Text>
+
+        {inUse ? (
+          <Text style={styles.inUseText}>
+            {usageLabel ?? 'Used by existing performances'}
+          </Text>
         ) : null}
       </View>
 
-      <Pressable
-        onPress={onDelete}
-        disabled={disabled}
-        style={({ pressed }) => [
-          styles.deleteButton,
-          disabled && styles.deleteButtonDisabled,
-          pressed && !disabled && styles.deleteButtonPressed,
-        ]}
-      >
-        <Text
-          style={[
-            styles.deleteButtonText,
-            disabled && styles.deleteButtonTextDisabled,
+      {onManageSubItems ? (
+        <Pressable
+          onPress={onManageSubItems}
+          style={({ pressed }) => [
+            styles.manageSubItemsButton,
+            pressed && styles.buttonPressed,
           ]}
         >
-          Remove
-        </Text>
-      </Pressable>
+          <Text style={styles.manageSubItemsButtonText}>
+            {manageSubItemsLabel}
+          </Text>
+        </Pressable>
+      ) : null}
+
+      <View style={styles.actions}>
+        {inUse && onViewUsage ? (
+          <Pressable
+            onPress={onViewUsage}
+            style={({ pressed }) => [
+              styles.actionButton,
+              pressed && styles.buttonPressed,
+            ]}
+          >
+            <Text style={styles.actionButtonText}>Uses</Text>
+          </Pressable>
+        ) : null}
+
+        {onEdit ? (
+          <Pressable
+            onPress={onEdit}
+            style={({ pressed }) => [
+              styles.actionButton,
+              pressed && styles.buttonPressed,
+            ]}
+          >
+            <Text style={styles.actionButtonText}>Edit</Text>
+          </Pressable>
+        ) : null}
+
+        <Pressable
+          onPress={onDelete}
+          style={({ pressed }) => [
+            styles.actionButton,
+            styles.deleteButton,
+            pressed && styles.buttonPressed,
+          ]}
+        >
+          <Text style={styles.deleteButtonText}>Remove</Text>
+        </Pressable>
+      </View>
     </View>
   );
+
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.pressableWrapper,
+          pressed && styles.rowPressed,
+        ]}
+      >
+        {content}
+      </Pressable>
+    );
+  }
+
+  return <View style={styles.pressableWrapper}>{content}</View>;
 }
 
 const styles = StyleSheet.create({
+  pressableWrapper: {
+    marginBottom: spacing.sm,
+  },
   row: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.lg,
-    marginBottom: spacing.sm,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     gap: spacing.md,
-    alignItems: 'center',
+  },
+  rowPressed: {
+    opacity: 0.85,
   },
   textContainer: {
-    flex: 1,
     minWidth: 0,
   },
   title: {
@@ -74,29 +137,51 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 2,
   },
-  disabledText: {
+  inUseText: {
     color: colors.textMuted,
     fontSize: 12,
     marginTop: 6,
   },
-  deleteButton: {
+  actions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  actionButton: {
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceMuted,
   },
-  deleteButtonPressed: {
+  buttonPressed: {
     opacity: 0.8,
   },
-  deleteButtonDisabled: {
-    opacity: 0.45,
+  actionButtonText: {
+    color: colors.accent,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  deleteButton: {
+    backgroundColor: colors.surfaceMuted,
   },
   deleteButtonText: {
     color: colors.destructive,
     fontSize: 13,
     fontWeight: '700',
   },
-  deleteButtonTextDisabled: {
-    color: colors.textMuted,
+  manageSubItemsButton: {
+    flexBasis: '100%',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceMuted,
+    alignItems: 'center',
+    width: '40%',
+  },
+  manageSubItemsButtonText: {
+    color: colors.accent,
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 });
