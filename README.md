@@ -4,7 +4,7 @@ Track every show you've ever attended.
 
 Stage Passport is a full-stack concert tracking platform that helps live music fans build a searchable archive of performances, artists, venues, and concerts. Available on the App Store, Stage Passport combines a native mobile experience with a scalable backend designed to support rich catalog management, fast search, and long-term data growth.
 
-**App Store:** https://apps.apple.com/us/app/stage-passport/id6762957272
+[App Store](https://apps.apple.com/app/apple-store/id6762957272?pt=128814075&ct=github&mt=8)
 
 ---
 
